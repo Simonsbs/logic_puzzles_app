@@ -9,7 +9,6 @@ class SupabaseProgressSyncService implements ProgressSyncService {
 
   @override
   Future<void> syncProgress(UserProgress progress) async {
-    await _client.auth.refreshSession();
     final user = _client.auth.currentUser;
     final session = _client.auth.currentSession;
     if (user == null || session == null) {
@@ -31,15 +30,9 @@ class SupabaseProgressSyncService implements ProgressSyncService {
           'streak_days': progress.streakDays,
           'hints_used': progress.hintsUsed,
         },
-        headers: <String, String>{
-          'Authorization': 'Bearer ${session.accessToken}',
-        },
       );
     } on FunctionException catch (error) {
       final parsed = _parseFunctionError(error);
-      if (parsed.reasonCode == 'invalid_user_session') {
-        await _client.auth.signOut();
-      }
       throw ProgressSyncException(
         _reasonMessage(parsed.reasonCode, fallback: parsed.message),
         reasonCode: parsed.reasonCode ?? 'function_error',

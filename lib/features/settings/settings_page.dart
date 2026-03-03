@@ -256,8 +256,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       final lastSyncResult = prefs.getString('diag_last_sync_result');
       final lastSyncTime = prefs.getString('diag_last_sync_time');
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
+      if (Supabase.instance.client.auth.currentSession == null) {
         throw const ProgressSyncException(
           'Session expired. Please sign in again.',
           reasonCode: 'no_session',
@@ -266,9 +265,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
       await Supabase.instance.client.functions.invoke(
         'submit-client-log',
-        headers: <String, String>{
-          'Authorization': 'Bearer ${session.accessToken}',
-        },
         body: <String, dynamic>{
           'log_type': 'sync_diagnostics',
           'message':
