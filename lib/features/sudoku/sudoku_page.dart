@@ -7,6 +7,7 @@ import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/models/user_progress.dart';
 import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SudokuPage extends ConsumerStatefulWidget {
   const SudokuPage({super.key});
@@ -47,6 +48,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    unawaited(_persistElapsedSeconds());
     super.dispose();
   }
 
@@ -143,6 +145,12 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
         const Text(
           'Sudoku',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        IconButton(
+          onPressed: _solved ? null : _confirmResetBoard,
+          icon: const Icon(Icons.restart_alt),
+          visualDensity: VisualDensity.compact,
+          tooltip: 'Reset board',
         ),
         const Spacer(),
         Text(
@@ -519,7 +527,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       }
     }
 
-    _startTimer();
+    unawaited(_restoreElapsedSecondsAndStartTimer());
     _initialized = true;
   }
 
@@ -534,7 +542,10 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   }
 
   void _pauseGame() {
-    setState(() => _paused = true);
+    if (!_paused) {
+      setState(() => _paused = true);
+    }
+    unawaited(_persistElapsedSeconds());
   }
 
   void _resumeGame() {
@@ -670,7 +681,80 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
     _timer?.cancel();
     _solved = true;
+    unawaited(_clearPersistedElapsedSeconds());
     _syncCompletion();
+  }
+
+  Future<void> _restoreElapsedSecondsAndStartTimer() async {
+    _elapsedSeconds = await _loadPersistedElapsedSeconds();
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    _startTimer();
+  }
+
+  Future<void> _confirmResetBoard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset board?'),
+        content: const Text(
+          'This will clear all your current entries for this puzzle. The timer will keep running.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() {
+      _board = _copyGrid(_initialGrid);
+      _pencilMarks = <String, Set<int>>{};
+      _history.clear();
+      _hintsUsed = 0;
+      _selectedRow = null;
+      _selectedCol = null;
+      _paused = false;
+      _solved = false;
+    });
+  }
+
+  Future<int> _loadPersistedElapsedSeconds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_timerStorageKey()) ?? 0;
+  }
+
+  Future<void> _persistElapsedSeconds() async {
+    if (!_initialized || _solved) {
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_timerStorageKey(), _elapsedSeconds);
+  }
+
+  Future<void> _clearPersistedElapsedSeconds() async {
+    if (!_initialized) {
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_timerStorageKey());
+  }
+
+  String _timerStorageKey() {
+    final userId = ref.read(authServiceProvider).currentUser?.id ?? 'guest-local';
+    return 'sudoku_elapsed_${userId}_${_puzzle.id}';
   }
 
   Future<void> _syncCompletion() async {
