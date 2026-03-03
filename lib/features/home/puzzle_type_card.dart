@@ -19,6 +19,7 @@ class PuzzleTypeCard extends StatelessWidget {
     final available = type.isAvailableNow;
     final accent =
         available ? const Color(0xFF0D8A63) : const Color(0xFFCC8A17);
+    final icon = _iconForType(type);
 
     return Material(
       color: Colors.white,
@@ -42,10 +43,7 @@ class PuzzleTypeCard extends StatelessWidget {
                     color: accent.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    available ? Icons.extension : Icons.hourglass_bottom,
-                    color: accent,
-                  ),
+                  child: Icon(icon, color: accent),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -86,5 +84,20 @@ class PuzzleTypeCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  IconData _iconForType(PuzzleType type) {
+    switch (type) {
+      case PuzzleType.sudoku:
+        return Icons.grid_on_rounded;
+      case PuzzleType.queens:
+        return Icons.workspace_premium_rounded;
+      case PuzzleType.kakuro:
+        return Icons.calculate_rounded;
+      case PuzzleType.nonogram:
+        return Icons.draw_rounded;
+      case PuzzleType.minesweeper:
+        return Icons.flag_rounded;
+    }
   }
 }
