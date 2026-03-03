@@ -118,6 +118,46 @@ Timer/unit files:
 - `deploy/systemd/logic-puzzle-builder.service`
 - `deploy/systemd/logic-puzzle-builder.timer`
 
+## Local Backend Manager (Usage + Puzzle Editing)
+
+Provides a local web dashboard to:
+- monitor usage metrics (runs, active users, submissions)
+- list/edit/delete puzzles for all modes (`sudoku`, `queens`, `kakuro`, `nonogram`, `minesweeper`)
+
+### Files
+- Backend app: `admin_manager/app.py`
+- UI template: `admin_manager/templates/dashboard.html`
+- Edge Function bridge: `supabase/functions/admin-manager/index.ts`
+- Run script: `scripts/run_admin_manager.sh`
+- Service installer: `scripts/install_admin_manager_service.sh`
+
+### Setup
+1. Copy env template:
+```bash
+cp .env.admin_manager.example .env.admin_manager
+```
+2. Fill required values:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `ADMIN_MANAGER_SECRET` (must match deployed function secret)
+- optional host/port (`ADMIN_MANAGER_HOST`, `ADMIN_MANAGER_PORT`)
+
+### Run manually
+```bash
+./scripts/run_admin_manager.sh
+```
+
+Default local URL:
+- `http://127.0.0.1:8095`
+
+### Install as local service
+```bash
+./scripts/install_admin_manager_service.sh
+```
+
+Service file:
+- `deploy/systemd/logic-admin-manager.service`
+
 ## Next implementation steps
 
 1. Replace placeholder Sudoku/Queens screens with full interactive game engines.

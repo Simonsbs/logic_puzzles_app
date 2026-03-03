@@ -47,3 +47,6 @@ app.*.map.json
 # Local Supabase runtime config
 .env.supabase.json
 .env.puzzle_builder
+
+.env.admin_manager
+.venv-admin-manager/

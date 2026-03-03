@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Puzzle Backend Manager</title>
+  <style>
+    :root { --bg:#f4f6f8; --card:#ffffff; --text:#24303a; --muted:#607080; --accent:#0b6bcb; --ok:#198754; --warn:#b36a00; --danger:#bb2d3b; }
+    body { margin:0; font-family: "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    h1 { margin: 0 0 16px; }
+    .grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); padding:14px; }
+    .k { font-size:12px; color:var(--muted); }
+    .v { font-size:24px; font-weight:700; margin-top:6px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .tabs a { text-decoration:none; padding:8px 12px; border-radius:999px; background:#e8edf2; color:var(--text); }
+    .tabs a.active { background:var(--accent); color:white; }
+    table { width:100%; border-collapse: collapse; font-size:14px; }
+    th, td { text-align:left; border-bottom:1px solid #e6ecf0; padding:8px 6px; vertical-align: top; }
+    .pill { display:inline-block; padding:4px 8px; border-radius:999px; background:#e8edf2; font-size:12px; }
+    .pill.ok { background:#e8f6ee; color:var(--ok); }
+    .pill.warn { background:#fff2df; color:var(--warn); }
+    .pill.danger { background:#fde8ea; color:var(--danger); }
+    textarea, input, select { width:100%; box-sizing:border-box; padding:8px; border:1px solid #d4dbe1; border-radius:8px; font-family: inherit; }
+    textarea { min-height: 120px; }
+    button { padding:8px 12px; border:0; border-radius:8px; background:var(--accent); color:white; font-weight:600; cursor:pointer; }
+    button.danger { background:var(--danger); }
+    .flash { margin: 10px 0; padding: 10px; border-radius: 8px; background: #eef5ff; }
+    .split { display:grid; gap:12px; grid-template-columns: 1.3fr .7fr; }
+    @media (max-width: 980px) { .split { grid-template-columns: 1fr; } }
+    pre { margin:0; white-space:pre-wrap; word-break:break-word; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Puzzle Backend Manager</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid">
+      <div class="card"><div class="k">Total Puzzles</div><div class="v">{{ usage.total_puzzles or 0 }}</div></div>
+      <div class="card"><div class="k">Completed Runs</div><div class="v">{{ usage.completed_runs or 0 }}</div></div>
+      <div class="card"><div class="k">In-Progress Runs</div><div class="v">{{ usage.in_progress_runs or 0 }}</div></div>
+      <div class="card"><div class="k">Active Users</div><div class="v">{{ usage.active_users or 0 }}</div></div>
+      <div class="card"><div class="k">Accepted Submissions (24h)</div><div class="v">{{ usage.accepted_submissions_24h or 0 }}</div></div>
+      <div class="card"><div class="k">Accepted Submissions (7d)</div><div class="v">{{ usage.accepted_submissions_7d or 0 }}</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row">
+        <div class="k">Puzzles by Type:</div>
+        {% for k, v in (usage.puzzles_by_type or {}).items() %}<span class="pill">{{k}}: {{v}}</span>{% endfor %}
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="k">Puzzles by Difficulty:</div>
+        {% for k, v in (usage.puzzles_by_difficulty or {}).items() %}<span class="pill">{{k}}: {{v}}</span>{% endfor %}
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="k">Submissions by Type:</div>
+        {% for k, v in (usage.submissions_by_type or {}).items() %}<span class="pill">{{k}}: {{v}}</span>{% endfor %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="tabs row">
+        <a class="{% if selected_type == 'sudoku' %}active{% endif %}" href="/?type=sudoku">Sudoku</a>
+        <a class="{% if selected_type == 'queens' %}active{% endif %}" href="/?type=queens">Queens</a>
+        <a class="{% if selected_type == 'kakuro' %}active{% endif %}" href="/?type=kakuro">Kakuro</a>
+        <a class="{% if selected_type == 'nonogram' %}active{% endif %}" href="/?type=nonogram">Nonogram</a>
+        <a class="{% if selected_type == 'minesweeper' %}active{% endif %}" href="/?type=minesweeper">Minesweeper</a>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:12px;">
+      <div class="card">
+        <h3 style="margin-top:0;">Existing Puzzles ({{ selected_type }})</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Difficulty</th><th>Daily</th><th>Published</th><th>Hash</th><th>Actions</th></tr></thead>
+          <tbody>
+          {% for p in puzzles %}
+            <tr>
+              <td><strong>{{ p.id }}</strong><br/><span class="k">{{ p.title }}</span></td>
+              <td>{{ p.difficulty }}</td>
+              <td>{% if p.is_daily %}<span class="pill ok">daily</span>{% else %}<span class="pill">no</span>{% endif %}</td>
+              <td>{{ p.published_at }}</td>
+              <td><span class="k">{{ p.puzzle_hash or '-' }}</span></td>
+              <td>
+                <form method="post" action="/puzzles/delete/{{ p.id }}?type={{ selected_type }}" onsubmit="return confirm('Delete {{ p.id }} ?');">
+                  <button class="danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Create / Update Puzzle</h3>
+        <form method="post" action="/puzzles/save">
+          <label>ID</label>
+          <input name="id" placeholder="example: sudoku-20260304-easy" required />
+          <label style="margin-top:8px; display:block;">Type</label>
+          <select name="type">
+            <option {% if selected_type == 'sudoku' %}selected{% endif %}>sudoku</option>
+            <option {% if selected_type == 'queens' %}selected{% endif %}>queens</option>
+            <option {% if selected_type == 'kakuro' %}selected{% endif %}>kakuro</option>
+            <option {% if selected_type == 'nonogram' %}selected{% endif %}>nonogram</option>
+            <option {% if selected_type == 'minesweeper' %}selected{% endif %}>minesweeper</option>
+          </select>
+          <label style="margin-top:8px; display:block;">Title</label>
+          <input name="title" placeholder="Puzzle title" />
+          <label style="margin-top:8px; display:block;">Difficulty</label>
+          <input name="difficulty" placeholder="Easy / Medium / Hard" />
+          <label style="margin-top:8px; display:block;">Published At (ISO, optional)</label>
+          <input name="published_at" placeholder="2026-03-04T00:00:00+00:00" />
+          <label style="margin-top:8px; display:block;">
+            <input type="checkbox" name="is_daily" checked /> Daily puzzle
+          </label>
+          <label style="margin-top:8px; display:block;">Payload JSON</label>
+          <textarea name="payload" placeholder='{"grid": [[...]]}' required></textarea>
+          <button type="submit" style="margin-top:10px; width:100%;">Save Puzzle</button>
+        </form>
+        <p class="k" style="margin-top:8px;">For Sudoku, hash is computed automatically from grid.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

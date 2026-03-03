@@ -1,0 +1,16 @@
+[Unit]
+Description=Logic Puzzles Local Backend Manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/simon/logic_puzzles_app
+ExecStart=/home/simon/logic_puzzles_app/scripts/run_admin_manager.sh
+Restart=always
+RestartSec=5
+User=simon
+Group=simon
+
+[Install]
+WantedBy=multi-user.target
