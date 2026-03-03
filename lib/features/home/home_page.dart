@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logic_puzzles_app/core/models/leaderboard_entry.dart';
+import 'package:logic_puzzles_app/core/services/auth_service.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/features/coming_soon/coming_soon_page.dart';
 import 'package:logic_puzzles_app/features/home/puzzle_type_card.dart';
 import 'package:logic_puzzles_app/features/puzzles/puzzle_list_page.dart';
+import 'package:logic_puzzles_app/features/settings/settings_page.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 
 class HomePage extends ConsumerWidget {
@@ -16,6 +18,8 @@ class HomePage extends ConsumerWidget {
     final config = ref.watch(appConfigProvider);
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Logic Games')),
+      drawer: _AppDrawer(user: user),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -28,11 +32,6 @@ class HomePage extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
             children: <Widget>[
-              _TopBar(
-                signedIn: user != null,
-                onPressed: () => _onAuthTap(context, ref),
-              ),
-              const SizedBox(height: 12),
               _HeroPanel(
                 userName: user?.displayName,
                 modeLabel:
@@ -78,24 +77,6 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Future<void> _onAuthTap(BuildContext context, WidgetRef ref) async {
-    final auth = ref.read(authServiceProvider);
-    try {
-      if (auth.currentUser == null) {
-        await auth.signInWithGoogle();
-        return;
-      }
-      await auth.signOut();
-    } catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
-    }
-  }
-
   void _openPuzzleType(BuildContext context, PuzzleType type) {
     switch (type) {
       case PuzzleType.sudoku:
@@ -122,6 +103,84 @@ class HomePage extends ConsumerWidget {
   }
 }
 
+class _AppDrawer extends ConsumerWidget {
+  const _AppDrawer({required this.user});
+
+  final AuthUser? user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: <Widget>[
+            UserAccountsDrawerHeader(
+              margin: EdgeInsets.zero,
+              decoration: const BoxDecoration(color: Color(0xFF0B6E4F)),
+              accountName: Text(user?.displayName ?? 'Guest'),
+              accountEmail: Text(
+                user?.email.isNotEmpty == true ? user!.email : 'Not signed in',
+              ),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: const Color(0xFFBDE8D6),
+                child: Icon(
+                  user == null ? Icons.person_outline : Icons.person,
+                  color: const Color(0xFF0D2A22),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+              },
+            ),
+            ListTile(
+              leading: Icon(user == null ? Icons.login : Icons.logout),
+              title: Text(user == null ? 'Sign in with Google' : 'Sign out'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _toggleAuth(context, ref);
+              },
+            ),
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'Free forever. No ads. No subscription.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF5D6C66)),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _toggleAuth(BuildContext context, WidgetRef ref) async {
+  final auth = ref.read(authServiceProvider);
+  try {
+    if (auth.currentUser == null) {
+      await auth.signInWithGoogle();
+      return;
+    }
+    await auth.signOut();
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$error')));
+  }
+}
+
 class _PuzzleTypeTile extends ConsumerWidget {
   const _PuzzleTypeTile({required this.type, required this.onTap});
 
@@ -132,27 +191,6 @@ class _PuzzleTypeTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final streak = ref.watch(modeStreakProvider(type)).valueOrNull;
     return PuzzleTypeCard(type: type, onTap: onTap, streak: streak);
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.signedIn, required this.onPressed});
-
-  final bool signedIn;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Text('Logic Games', style: Theme.of(context).textTheme.headlineSmall),
-        const Spacer(),
-        FilledButton.tonal(
-          onPressed: onPressed,
-          child: Text(signedIn ? 'Sign out' : 'Sign in'),
-        ),
-      ],
-    );
   }
 }
 

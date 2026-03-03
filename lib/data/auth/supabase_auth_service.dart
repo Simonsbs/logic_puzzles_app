@@ -6,8 +6,8 @@ class SupabaseAuthService implements AuthService {
   SupabaseAuthService({
     required SupabaseClient client,
     required String redirectUrl,
-  })  : _client = client,
-        _redirectUrl = redirectUrl;
+  }) : _client = client,
+       _redirectUrl = redirectUrl;
 
   final SupabaseClient _client;
   final String _redirectUrl;
@@ -25,7 +25,8 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Future<AuthUser?> signInWithGoogle() async {
-    final isMobile = !kIsWeb &&
+    final isMobile =
+        !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     if (!isMobile) {
@@ -44,6 +45,12 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Future<void> signOut() async {
+    await _client.auth.signOut();
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    await _client.functions.invoke('delete-account');
     await _client.auth.signOut();
   }
 

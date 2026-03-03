@@ -28,4 +28,9 @@ class LocalAuthService implements AuthService {
     _currentUser = null;
     _controller.add(null);
   }
+
+  @override
+  Future<void> deleteAccount() async {
+    await signOut();
+  }
 }
