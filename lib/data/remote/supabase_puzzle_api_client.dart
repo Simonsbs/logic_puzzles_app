@@ -13,7 +13,7 @@ class SupabasePuzzleApiClient implements PuzzleApiClient {
     try {
       final response = await _client
           .from('puzzles')
-          .select('id, type, title, difficulty, payload, is_daily')
+          .select('id, type, title, difficulty, payload, is_daily, published_at')
           .eq('type', type.name)
           .eq('is_daily', daily)
           .order('published_at', ascending: false)
@@ -27,6 +27,21 @@ class SupabasePuzzleApiClient implements PuzzleApiClient {
       return Puzzle.fromJson(rows.first);
     } catch (_) {
       return null;
+    }
+  }
+
+  @override
+  Future<List<Puzzle>> fetchPuzzles(PuzzleType type) async {
+    try {
+      final response = await _client
+          .from('puzzles')
+          .select('id, type, title, difficulty, payload, is_daily, published_at')
+          .eq('type', type.name)
+          .order('published_at', ascending: false);
+      final rows = List<Map<String, dynamic>>.from(response as List);
+      return rows.map(Puzzle.fromJson).toList();
+    } catch (_) {
+      return <Puzzle>[];
     }
   }
 }

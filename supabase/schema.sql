@@ -20,6 +20,9 @@ create table if not exists user_progress (
   best_seconds integer not null default 0,
   hints_used integer not null default 0,
   streak_days integer not null default 0,
+  session_elapsed_seconds integer not null default 0,
+  session_state jsonb,
+  session_updated_at timestamptz,
   updated_at timestamptz not null default now(),
   primary key (user_id, puzzle_id)
 );
@@ -51,6 +54,9 @@ create index if not exists score_submission_events_user_time_idx
 
 create index if not exists score_submission_events_user_puzzle_time_idx
   on score_submission_events (user_id, puzzle_id, created_at desc);
+
+create index if not exists user_progress_user_type_updated_idx
+  on user_progress (user_id, type, updated_at desc);
 
 insert into puzzles (id, type, title, difficulty, payload, is_daily, published_at)
 values

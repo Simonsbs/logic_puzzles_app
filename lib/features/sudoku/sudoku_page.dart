@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logic_puzzles_app/core/models/puzzle.dart';
+import 'package:logic_puzzles_app/core/models/sudoku_session_state.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/models/user_progress.dart';
 import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SudokuPage extends ConsumerStatefulWidget {
-  const SudokuPage({super.key});
+  const SudokuPage({super.key, required this.puzzle});
+
+  final Puzzle puzzle;
 
   @override
   ConsumerState<SudokuPage> createState() => _SudokuPageState();
@@ -48,7 +50,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
-    unawaited(_persistElapsedSeconds());
+    unawaited(_persistSession());
     super.dispose();
   }
 
@@ -61,73 +63,62 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+    if (!_initialized) {
+      _setupGame(widget.puzzle);
+    }
+
     return Scaffold(
-      body: FutureBuilder<Puzzle>(
-        future: ref.read(puzzleRepositoryProvider).getPuzzle(PuzzleType.sudoku, daily: true),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const horizontalPadding = 12.0;
+            const topPadding = 4.0;
+            const bottomPadding = 8.0;
+            const gap = 6.0;
+            const topBarHeight = 34.0;
+            const actionHeight = 106.0;
+            const targetNumberPadHeight = 110.0;
+            const minNumberPadHeight = 72.0;
+            const minBoardSize = 150.0;
 
-          if (!_initialized) {
-            _setupGame(snapshot.data!);
-          }
+            final availableHeight = constraints.maxHeight - topPadding - bottomPadding;
+            final usableWidth = constraints.maxWidth - (horizontalPadding * 2);
+            var boardSize = (availableHeight -
+                    topBarHeight -
+                    actionHeight -
+                    targetNumberPadHeight -
+                    (gap * 3))
+                .clamp(minBoardSize, usableWidth)
+                .toDouble();
+            var numberPadHeight = availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
+            if (numberPadHeight < minNumberPadHeight) {
+              final needed = minNumberPadHeight - numberPadHeight;
+              boardSize = (boardSize - needed).clamp(minBoardSize, usableWidth).toDouble();
+              numberPadHeight = availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
+            }
+            numberPadHeight = numberPadHeight.clamp(minNumberPadHeight, 190.0).toDouble();
 
-          return SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const horizontalPadding = 12.0;
-                const topPadding = 4.0;
-                const bottomPadding = 8.0;
-                const gap = 6.0;
-                const topBarHeight = 34.0;
-                const actionHeight = 106.0;
-                const targetNumberPadHeight = 110.0;
-                const minNumberPadHeight = 72.0;
-                const minBoardSize = 150.0;
-
-                final availableHeight = constraints.maxHeight - topPadding - bottomPadding;
-                final usableWidth = constraints.maxWidth - (horizontalPadding * 2);
-                var boardSize = (availableHeight -
-                        topBarHeight -
-                        actionHeight -
-                        targetNumberPadHeight -
-                        (gap * 3))
-                    .clamp(minBoardSize, usableWidth)
-                    .toDouble();
-                var numberPadHeight =
-                    availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
-                if (numberPadHeight < minNumberPadHeight) {
-                  final needed = minNumberPadHeight - numberPadHeight;
-                  boardSize = (boardSize - needed).clamp(minBoardSize, usableWidth).toDouble();
-                  numberPadHeight =
-                      availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
-                }
-                numberPadHeight = numberPadHeight.clamp(minNumberPadHeight, 190.0).toDouble();
-
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    topPadding,
-                    horizontalPadding,
-                    bottomPadding,
-                  ),
-                  child: Column(
-                    children: <Widget>[
-                      SizedBox(height: topBarHeight, child: _compactTopBar()),
-                      const SizedBox(height: gap),
-                      SizedBox(height: boardSize, width: boardSize, child: _boardCard()),
-                      const SizedBox(height: gap),
-                      SizedBox(height: numberPadHeight, child: _numberPad()),
-                      const SizedBox(height: gap),
-                      SizedBox(height: actionHeight, child: _actionRow()),
-                    ],
-                  ),
-                );
-              },
-            ),
-          );
-        },
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                horizontalPadding,
+                topPadding,
+                horizontalPadding,
+                bottomPadding,
+              ),
+              child: Column(
+                children: <Widget>[
+                  SizedBox(height: topBarHeight, child: _compactTopBar()),
+                  const SizedBox(height: gap),
+                  SizedBox(height: boardSize, width: boardSize, child: _boardCard()),
+                  const SizedBox(height: gap),
+                  SizedBox(height: numberPadHeight, child: _numberPad()),
+                  const SizedBox(height: gap),
+                  SizedBox(height: actionHeight, child: _actionRow()),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -136,7 +127,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     return Row(
       children: <Widget>[
         IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: _handleBack,
           icon: const Icon(Icons.arrow_back),
           visualDensity: VisualDensity.compact,
           tooltip: 'Back',
@@ -527,7 +518,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       }
     }
 
-    unawaited(_restoreElapsedSecondsAndStartTimer());
+    unawaited(_restoreSessionAndStartTimer());
     _initialized = true;
   }
 
@@ -538,17 +529,26 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
         return;
       }
       setState(() => _elapsedSeconds++);
+      if (_elapsedSeconds % 5 == 0) {
+        unawaited(_persistSession());
+      }
     });
   }
 
   void _pauseGame() {
+    if (!mounted) {
+      return;
+    }
     if (!_paused) {
       setState(() => _paused = true);
     }
-    unawaited(_persistElapsedSeconds());
+    unawaited(_persistSession());
   }
 
   void _resumeGame() {
+    if (!mounted) {
+      return;
+    }
     setState(() => _paused = false);
   }
 
@@ -580,6 +580,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       }
       _pencilMarks[key] = marks;
       setState(() {});
+      unawaited(_persistSession());
       return;
     }
 
@@ -588,6 +589,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     _removeValueFromPeers(row, col, value);
 
     setState(() {});
+    unawaited(_persistSession());
     _checkSolved();
   }
 
@@ -605,6 +607,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     _board[row][col] = 0;
     _pencilMarks.remove(_cellKey(row, col));
     setState(() {});
+    unawaited(_persistSession());
   }
 
   void _undo() {
@@ -617,6 +620,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       _pencilMarks = last.pencilMarks.map((k, v) => MapEntry(k, Set<int>.from(v)));
       _hintsUsed = last.hintsUsed;
     });
+    unawaited(_persistSession());
   }
 
   void _useHint() {
@@ -641,6 +645,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     _removeValueFromPeers(targetRow, targetCol, _solution[targetRow][targetCol]);
     _hintsUsed++;
     setState(() {});
+    unawaited(_persistSession());
     _checkSolved();
   }
 
@@ -681,12 +686,18 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
     _timer?.cancel();
     _solved = true;
-    unawaited(_clearPersistedElapsedSeconds());
+    unawaited(ref.read(puzzleSessionServiceProvider).clearSudokuSession(puzzleId: _puzzle.id));
     _syncCompletion();
   }
 
-  Future<void> _restoreElapsedSecondsAndStartTimer() async {
-    _elapsedSeconds = await _loadPersistedElapsedSeconds();
+  Future<void> _restoreSessionAndStartTimer() async {
+    final session = await ref.read(puzzleSessionServiceProvider).loadSudokuSession(puzzleId: _puzzle.id);
+    if (session != null && _isValidSessionBoard(session.board)) {
+      _board = _copyGrid(session.board);
+      _pencilMarks = session.pencilMarks.map((k, v) => MapEntry(k, Set<int>.from(v)));
+      _hintsUsed = session.hintsUsed;
+      _elapsedSeconds = session.elapsedSeconds;
+    }
     if (!mounted) {
       return;
     }
@@ -729,32 +740,23 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       _paused = false;
       _solved = false;
     });
+    unawaited(_persistSession());
   }
 
-  Future<int> _loadPersistedElapsedSeconds() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_timerStorageKey()) ?? 0;
-  }
-
-  Future<void> _persistElapsedSeconds() async {
+  Future<void> _persistSession() async {
     if (!_initialized || _solved) {
       return;
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_timerStorageKey(), _elapsedSeconds);
-  }
-
-  Future<void> _clearPersistedElapsedSeconds() async {
-    if (!_initialized) {
-      return;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_timerStorageKey());
-  }
-
-  String _timerStorageKey() {
-    final userId = ref.read(authServiceProvider).currentUser?.id ?? 'guest-local';
-    return 'sudoku_elapsed_${userId}_${_puzzle.id}';
+    await ref.read(puzzleSessionServiceProvider).saveSudokuSession(
+          SudokuSessionState(
+            puzzleId: _puzzle.id,
+            board: _copyGrid(_board),
+            pencilMarks: _pencilMarks.map((k, v) => MapEntry(k, Set<int>.from(v))),
+            hintsUsed: _hintsUsed,
+            elapsedSeconds: _elapsedSeconds,
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
   }
 
   Future<void> _syncCompletion() async {
@@ -801,6 +803,20 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   }
 
   String _cellKey(int row, int col) => '$row:$col';
+
+  bool _isValidSessionBoard(List<List<int>> board) {
+    if (board.length != 9) {
+      return false;
+    }
+    return board.every((row) => row.length == 9);
+  }
+
+  Future<void> _handleBack() async {
+    _pauseGame();
+    if (context.mounted) {
+      Navigator.of(context).maybePop();
+    }
+  }
 
   void _pushHistory() {
     _history.add(

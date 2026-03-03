@@ -10,6 +10,7 @@ class Puzzle {
     required this.difficulty,
     required this.payload,
     this.isDaily = false,
+    this.publishedAt,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class Puzzle {
   final String difficulty;
   final Map<String, dynamic> payload;
   final bool isDaily;
+  final DateTime? publishedAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -26,6 +28,7 @@ class Puzzle {
         'difficulty': difficulty,
         'payload': payload,
         'isDaily': isDaily,
+        'publishedAt': publishedAt?.toUtc().toIso8601String(),
       };
 
   String toStorageString() => jsonEncode(toJson());
@@ -42,6 +45,15 @@ class Puzzle {
       difficulty: json['difficulty'] as String,
       payload: Map<String, dynamic>.from(json['payload'] as Map),
       isDaily: json['isDaily'] as bool? ?? false,
+      publishedAt: _parsePublishedAt(json),
     );
+  }
+
+  static DateTime? _parsePublishedAt(Map<String, dynamic> json) {
+    final raw = json['publishedAt'] ?? json['published_at'];
+    if (raw is String) {
+      return DateTime.tryParse(raw);
+    }
+    return null;
   }
 }

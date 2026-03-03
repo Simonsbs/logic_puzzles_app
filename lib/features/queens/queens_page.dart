@@ -7,7 +7,9 @@ import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 
 class QueensPage extends ConsumerStatefulWidget {
-  const QueensPage({super.key});
+  const QueensPage({super.key, required this.puzzle});
+
+  final Puzzle puzzle;
 
   @override
   ConsumerState<QueensPage> createState() => _QueensPageState();
@@ -20,14 +22,9 @@ class _QueensPageState extends ConsumerState<QueensPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Queens')),
-      body: FutureBuilder<Puzzle>(
-        future: ref.read(puzzleRepositoryProvider).getPuzzle(PuzzleType.queens, daily: true),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final puzzle = snapshot.data!;
+      body: Builder(
+        builder: (context) {
+          final puzzle = widget.puzzle;
           final size = puzzle.payload['size'] as int;
           final blocked = (puzzle.payload['blocked'] as List)
               .map((e) => List<int>.from(e as List))

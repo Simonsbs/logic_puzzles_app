@@ -16,6 +16,23 @@ class HybridPuzzleRepository implements PuzzleRepository {
   }
 
   @override
+  Future<List<Puzzle>> getPuzzles(PuzzleType type) async {
+    final remote = await apiClient.fetchPuzzles(type);
+    if (remote.isNotEmpty) {
+      await localStore.cachePuzzles(type, remote);
+      return remote;
+    }
+
+    final cached = await localStore.loadCachedPuzzles(type);
+    if (cached.isNotEmpty) {
+      return cached;
+    }
+
+    final showcase = await localStore.loadShowcase();
+    return showcase.where((p) => p.type == type).toList();
+  }
+
+  @override
   Future<Puzzle> getPuzzle(PuzzleType type, {bool daily = false}) async {
     final remote = await apiClient.fetchPuzzle(type, daily: daily);
     if (remote != null) {
@@ -26,6 +43,11 @@ class HybridPuzzleRepository implements PuzzleRepository {
     final cached = await localStore.loadCachedPuzzle(type, daily: daily);
     if (cached != null) {
       return cached;
+    }
+
+    final puzzles = await getPuzzles(type);
+    if (puzzles.isNotEmpty) {
+      return puzzles.first;
     }
 
     final showcase = await localStore.loadShowcase();

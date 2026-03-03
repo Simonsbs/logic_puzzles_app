@@ -4,6 +4,8 @@ import 'package:logic_puzzles_app/core/models/leaderboard_entry.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/services/auth_service.dart';
 import 'package:logic_puzzles_app/core/services/leaderboard_service.dart';
+import 'package:logic_puzzles_app/core/services/puzzle_progress_service.dart';
+import 'package:logic_puzzles_app/core/services/puzzle_session_service.dart';
 import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/core/services/puzzle_repository.dart';
 import 'package:logic_puzzles_app/data/auth/local_auth_service.dart';
@@ -13,8 +15,12 @@ import 'package:logic_puzzles_app/data/remote/puzzle_api_client.dart';
 import 'package:logic_puzzles_app/data/remote/supabase_puzzle_api_client.dart';
 import 'package:logic_puzzles_app/data/repositories/hybrid_puzzle_repository.dart';
 import 'package:logic_puzzles_app/data/services/mock_leaderboard_service.dart';
+import 'package:logic_puzzles_app/data/services/mock_puzzle_progress_service.dart';
 import 'package:logic_puzzles_app/data/services/mock_progress_sync_service.dart';
+import 'package:logic_puzzles_app/data/services/local_puzzle_session_service.dart';
 import 'package:logic_puzzles_app/data/services/supabase_leaderboard_service.dart';
+import 'package:logic_puzzles_app/data/services/supabase_puzzle_progress_service.dart';
+import 'package:logic_puzzles_app/data/services/supabase_puzzle_session_service.dart';
 import 'package:logic_puzzles_app/data/services/supabase_progress_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 
@@ -60,6 +66,23 @@ final progressSyncServiceProvider = Provider<ProgressSyncService>((ref) {
     return MockProgressSyncService();
   }
   return SupabaseProgressSyncService(Supabase.instance.client);
+});
+
+final puzzleProgressServiceProvider = Provider<PuzzleProgressService>((ref) {
+  final config = ref.watch(appConfigProvider);
+  if (!config.supabaseEnabled) {
+    return MockPuzzleProgressService();
+  }
+  return SupabasePuzzleProgressService(Supabase.instance.client);
+});
+
+final puzzleSessionServiceProvider = Provider<PuzzleSessionService>((ref) {
+  final auth = ref.watch(authServiceProvider);
+  final config = ref.watch(appConfigProvider);
+  if (!config.supabaseEnabled) {
+    return LocalPuzzleSessionService(auth);
+  }
+  return SupabasePuzzleSessionService(client: Supabase.instance.client, authService: auth);
 });
 
 final leaderboardServiceProvider = Provider<LeaderboardService>((ref) {

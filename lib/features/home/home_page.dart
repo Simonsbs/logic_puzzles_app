@@ -4,8 +4,7 @@ import 'package:logic_puzzles_app/core/models/leaderboard_entry.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/features/coming_soon/coming_soon_page.dart';
 import 'package:logic_puzzles_app/features/home/puzzle_type_card.dart';
-import 'package:logic_puzzles_app/features/queens/queens_page.dart';
-import 'package:logic_puzzles_app/features/sudoku/sudoku_page.dart';
+import 'package:logic_puzzles_app/features/puzzles/puzzle_list_page.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 
 class HomePage extends ConsumerWidget {
@@ -84,9 +83,13 @@ class HomePage extends ConsumerWidget {
   void _openPuzzleType(BuildContext context, PuzzleType type) {
     switch (type) {
       case PuzzleType.sudoku:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SudokuPage()));
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PuzzleListPage(type: PuzzleType.sudoku)),
+        );
       case PuzzleType.queens:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueensPage()));
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PuzzleListPage(type: PuzzleType.queens)),
+        );
       case PuzzleType.kakuro:
       case PuzzleType.nonogram:
       case PuzzleType.minesweeper:
