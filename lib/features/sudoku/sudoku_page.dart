@@ -72,17 +72,57 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
           }
 
           return SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-              children: <Widget>[
-                _compactTopBar(),
-                const SizedBox(height: 10),
-                _boardCard(),
-                const SizedBox(height: 10),
-                _numberPad(),
-                const SizedBox(height: 8),
-                _actionRow(),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const horizontalPadding = 12.0;
+                const topPadding = 4.0;
+                const bottomPadding = 8.0;
+                const gap = 6.0;
+                const topBarHeight = 34.0;
+                const actionHeight = 46.0;
+                const targetNumberPadHeight = 140.0;
+                const minNumberPadHeight = 92.0;
+                const minBoardSize = 150.0;
+
+                final availableHeight = constraints.maxHeight - topPadding - bottomPadding;
+                final usableWidth = constraints.maxWidth - (horizontalPadding * 2);
+                var boardSize = (availableHeight -
+                        topBarHeight -
+                        actionHeight -
+                        targetNumberPadHeight -
+                        (gap * 3))
+                    .clamp(minBoardSize, usableWidth)
+                    .toDouble();
+                var numberPadHeight =
+                    availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
+                if (numberPadHeight < minNumberPadHeight) {
+                  final needed = minNumberPadHeight - numberPadHeight;
+                  boardSize = (boardSize - needed).clamp(minBoardSize, usableWidth).toDouble();
+                  numberPadHeight =
+                      availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
+                }
+                numberPadHeight = numberPadHeight.clamp(minNumberPadHeight, 190.0).toDouble();
+
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    topPadding,
+                    horizontalPadding,
+                    bottomPadding,
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      SizedBox(height: topBarHeight, child: _compactTopBar()),
+                      const SizedBox(height: gap),
+                      SizedBox(height: boardSize, width: boardSize, child: _boardCard()),
+                      const SizedBox(height: gap),
+                      SizedBox(height: numberPadHeight, child: _numberPad()),
+                      const SizedBox(height: gap),
+                      SizedBox(height: actionHeight, child: _actionRow()),
+                    ],
+                  ),
+                );
+              },
             ),
           );
         },
@@ -277,23 +317,22 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
   Widget _numberPad() {
     return GridView.count(
-      shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 3,
-      childAspectRatio: 1.55,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
+      childAspectRatio: 2.15,
+      mainAxisSpacing: 6,
+      crossAxisSpacing: 6,
       children: List<Widget>.generate(9, (i) {
         final n = i + 1;
         final disabledByUsage = _isValueExhausted(n);
         return FilledButton.tonal(
           onPressed: _paused || _solved || disabledByUsage ? null : () => _applyNumber(n),
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            textStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
             backgroundColor: _pencilMode ? const Color(0xFFDCE6FF) : null,
             foregroundColor: _pencilMode ? const Color(0xFF234AA5) : null,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           child: Text(
             '$n',
@@ -308,81 +347,72 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   }
 
   Widget _actionRow() {
-    return Column(
+    return Row(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: FilledButton.tonalIcon(
-                onPressed: _paused ? _resumeGame : _pauseGame,
-                icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 16),
-                label: Text(_paused ? 'Resume' : 'Pause'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: _paused ? _resumeGame : _pauseGame,
+            icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 14),
+            label: Text(_paused ? 'Resume' : 'Pause'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: FilledButton.tonalIcon(
-                onPressed: _solved || _paused
-                    ? null
-                    : () {
-                        setState(() => _pencilMode = !_pencilMode);
-                      },
-                icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 16),
-                label: const Text('Pencil'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                  backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
-                  foregroundColor: _pencilMode ? Colors.white : null,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: FilledButton.tonalIcon(
-                onPressed: _solved || _paused ? null : _useHint,
-                icon: const Icon(Icons.lightbulb, size: 16),
-                label: Text('Hint $_hintsUsed'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _paused || _solved ? null : _clearSelected,
-                icon: const Icon(Icons.backspace_outlined, size: 16),
-                label: const Text('Clear'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: _solved || _paused
+                ? null
+                : () {
+                    setState(() => _pencilMode = !_pencilMode);
+                  },
+            icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 14),
+            label: const Text('Pencil'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+              backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+              foregroundColor: _pencilMode ? Colors.white : null,
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
-                icon: const Icon(Icons.undo, size: 16),
-                label: const Text('Undo'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: _solved || _paused ? null : _useHint,
+            icon: const Icon(Icons.lightbulb, size: 14),
+            label: Text('Hint $_hintsUsed'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
             ),
-            const Spacer(),
-          ],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _paused || _solved ? null : _clearSelected,
+            icon: const Icon(Icons.backspace_outlined, size: 14),
+            label: const Text('Clear'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
+            icon: const Icon(Icons.undo, size: 14),
+            label: const Text('Undo'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+            ),
+          ),
         ),
       ],
     );
