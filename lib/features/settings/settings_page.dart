@@ -25,7 +25,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authUserProvider).value;
-    final userId = user?.id ?? 'guest-local';
+    final userId = user?.id ?? 'Not signed in';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -53,18 +53,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: userId));
-                      if (!context.mounted) {
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('User ID copied')),
-                      );
-                    },
+                    onPressed:
+                        user == null
+                            ? null
+                            : () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: userId),
+                              );
+                              if (!context.mounted) {
+                                return;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('User ID copied')),
+                              );
+                            },
                     icon: const Icon(Icons.content_copy),
                     label: const Text('Copy user ID'),
                   ),
+                  if (user == null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Sign in from the menu to enable cloud sync and support logs.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF6D7C86)),
+                    ),
+                  ],
                 ],
               ),
             ),
