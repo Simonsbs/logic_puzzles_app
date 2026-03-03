@@ -12,7 +12,10 @@ class SupabaseProgressSyncService implements ProgressSyncService {
     final user = _client.auth.currentUser;
     final session = _client.auth.currentSession;
     if (user == null || session == null) {
-      throw const ProgressSyncException('Please sign in to sync progress.');
+      throw const ProgressSyncException(
+        'Please sign out and sign in again to refresh your session.',
+        reasonCode: 'no_session',
+      );
     }
 
     late final FunctionResponse response;
@@ -35,7 +38,12 @@ class SupabaseProgressSyncService implements ProgressSyncService {
       final parsed = _parseFunctionError(error);
       throw ProgressSyncException(
         _reasonMessage(parsed.reasonCode, fallback: parsed.message),
-        reasonCode: parsed.reasonCode,
+        reasonCode: parsed.reasonCode ?? 'function_error',
+      );
+    } catch (error) {
+      throw ProgressSyncException(
+        'Score sync failed: ${error.toString()}',
+        reasonCode: 'invoke_error',
       );
     }
 
@@ -82,8 +90,8 @@ class SupabaseProgressSyncService implements ProgressSyncService {
 
     if ((reasonCode == null || reasonCode!.isEmpty) &&
         ((error.reasonPhrase ?? '').toLowerCase().contains(
-          'invalid user session',
-        ) ||
+              'invalid user session',
+            ) ||
             (error.details?.toString().toLowerCase().contains(
                   'invalid user session',
                 ) ??
