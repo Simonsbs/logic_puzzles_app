@@ -29,10 +29,18 @@ Free, no-ads, offline-first logic games app with Supabase backend support.
 
 ## Supabase setup
 
-1. Create a Supabase project.
-2. In SQL editor, run [`supabase/schema.sql`](supabase/schema.sql).
-3. In Auth providers, enable Google OAuth and configure redirect URL.
-4. Configure mobile deep-link redirect:
+Project already provisioned:
+- Project ref: `lwmmajjoytkqbfnxxghb`
+- URL: `https://lwmmajjoytkqbfnxxghb.supabase.co`
+
+Applied by CLI:
+- project creation
+- schema + RLS + leaderboard views migrations
+- initial Sudoku/Queens seed rows
+
+Still required in Supabase dashboard:
+1. In Auth providers, enable Google OAuth and configure Google client ID/secret.
+2. Configure mobile deep-link redirect:
    - default used by app: `com.simonsbs.logicpuzzles://login-callback/`
 
 ## Run locally (fallback mode)
@@ -49,6 +57,12 @@ flutter run \
   --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY \
   --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.simonsbs.logicpuzzles://login-callback/
+```
+
+Or use the prepared local file and script:
+
+```bash
+./scripts/run_supabase.sh
 ```
 
 ## Next implementation steps
