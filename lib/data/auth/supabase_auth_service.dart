@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:logic_puzzles_app/core/services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 
@@ -24,6 +25,16 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Future<AuthUser?> signInWithGoogle() async {
+    final isMobile = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (!isMobile) {
+      throw UnsupportedError(
+        'Google sign-in callback is configured for mobile app deep links. '
+        'Run this on Android/iOS for full OAuth flow.',
+      );
+    }
+
     await _client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: _redirectUrl,

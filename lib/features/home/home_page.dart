@@ -32,11 +32,22 @@ class HomePage extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               final auth = ref.read(authServiceProvider);
-              if (auth.currentUser == null) {
-                await auth.signInWithGoogle();
-                return;
+              try {
+                if (auth.currentUser == null) {
+                  await auth.signInWithGoogle();
+                  return;
+                }
+                await auth.signOut();
+              } catch (error) {
+                if (!context.mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$error'),
+                  ),
+                );
               }
-              await auth.signOut();
             },
             child: Text(user == null ? 'Sign in' : 'Sign out'),
           ),
