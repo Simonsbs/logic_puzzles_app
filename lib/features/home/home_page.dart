@@ -17,87 +17,152 @@ class HomePage extends ConsumerWidget {
     final config = ref.watch(appConfigProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Logic Games'),
-        actions: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Center(
-              child: Text(
-                config.supabaseEnabled ? 'Supabase' : 'Local mode',
-                style: Theme.of(context).textTheme.labelMedium,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[Color(0xFFE9F6F0), Color(0xFFF4F7F5)],
+          ),
+        ),
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+            children: <Widget>[
+              _TopBar(
+                signedIn: user != null,
+                onPressed: () => _onAuthTap(context, ref),
               ),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              final auth = ref.read(authServiceProvider);
-              try {
-                if (auth.currentUser == null) {
-                  await auth.signInWithGoogle();
-                  return;
-                }
-                await auth.signOut();
-              } catch (error) {
-                if (!context.mounted) {
-                  return;
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$error'),
+              const SizedBox(height: 12),
+              _HeroPanel(
+                userName: user?.displayName,
+                modeLabel: config.supabaseEnabled ? 'Cloud Sync On' : 'Local Mode',
+              ),
+              const SizedBox(height: 18),
+              Text('Choose a puzzle', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              ...PuzzleType.values.map(
+                (type) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: PuzzleTypeCard(
+                    type: type,
+                    onTap: () => _openPuzzleType(context, type),
                   ),
-                );
-              }
-            },
-            child: Text(user == null ? 'Sign in' : 'Sign out'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('Leaderboards', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _LeaderboardSection(title: 'Sudoku', provider: sudokuTypeLeaderboardProvider),
+              _LeaderboardSection(title: 'Queens', provider: queensTypeLeaderboardProvider),
+              _LeaderboardSection(title: 'Daily streaks', provider: streakLeaderboardProvider),
+            ],
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          Text(
-            user == null ? 'Play as guest (sign in to sync progress).' : 'Hi ${user.displayName}',
-          ),
-          const SizedBox(height: 16),
-          Text('Puzzle Types', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          ...PuzzleType.values.map(
-            (type) => PuzzleTypeCard(
-              type: type,
-              onTap: () => _openPuzzleType(context, type),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text('Leaderboards', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          _LeaderboardSection(title: 'Sudoku', provider: sudokuTypeLeaderboardProvider),
-          _LeaderboardSection(title: 'Queens', provider: queensTypeLeaderboardProvider),
-          _LeaderboardSection(title: 'Daily streaks', provider: streakLeaderboardProvider),
-        ],
+        ),
       ),
     );
+  }
+
+  Future<void> _onAuthTap(BuildContext context, WidgetRef ref) async {
+    final auth = ref.read(authServiceProvider);
+    try {
+      if (auth.currentUser == null) {
+        await auth.signInWithGoogle();
+        return;
+      }
+      await auth.signOut();
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
   }
 
   void _openPuzzleType(BuildContext context, PuzzleType type) {
     switch (type) {
       case PuzzleType.sudoku:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SudokuPage()),
-        );
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SudokuPage()));
       case PuzzleType.queens:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const QueensPage()),
-        );
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QueensPage()));
       case PuzzleType.kakuro:
       case PuzzleType.nonogram:
       case PuzzleType.minesweeper:
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ComingSoonPage(puzzleName: type.displayName),
-          ),
+          MaterialPageRoute(builder: (_) => ComingSoonPage(puzzleName: type.displayName)),
         );
     }
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.signedIn, required this.onPressed});
+
+  final bool signedIn;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Text('Logic Games', style: Theme.of(context).textTheme.headlineSmall),
+        const Spacer(),
+        FilledButton.tonal(
+          onPressed: onPressed,
+          child: Text(signedIn ? 'Sign out' : 'Sign in'),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroPanel extends StatelessWidget {
+  const _HeroPanel({required this.userName, required this.modeLabel});
+
+  final String? userName;
+  final String modeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF123D2E), Color(0xFF1A7A5A)],
+        ),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(color: Color(0x33000000), blurRadius: 20, offset: Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            userName == null ? 'Play free forever. No ads.' : 'Welcome back, $userName',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sudoku and Queens are live now. More puzzle types are on the way.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFFE6FFF5)),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0x26FFFFFF),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(modeLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -111,33 +176,45 @@ class _LeaderboardSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(provider);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            data.when(
-              data: (rows) => Column(
-                children: rows
-                    .map(
-                      (row) => Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x11000000)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          data.when(
+            data: (rows) => Column(
+              children: rows
+                  .map(
+                    (row) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
                         children: <Widget>[
-                          Text('#${row.rank} ${row.userName}'),
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: const Color(0xFFE9F6F0),
+                            child: Text('${row.rank}', style: const TextStyle(fontSize: 11)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(row.userName)),
                           Text('${row.score} ${row.label}'),
                         ],
                       ),
-                    )
-                    .toList(),
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const Text('Failed to load leaderboard'),
+                    ),
+                  )
+                  .toList(),
             ),
-          ],
-        ),
+            loading: () => const LinearProgressIndicator(),
+            error: (_, __) => const Text('Failed to load leaderboard'),
+          ),
+        ],
       ),
     );
   }

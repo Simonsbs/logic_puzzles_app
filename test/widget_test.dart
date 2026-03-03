@@ -19,6 +19,6 @@ void main() {
 
     await tester.pump();
     expect(find.text('Logic Games'), findsOneWidget);
-    expect(find.text('Puzzle Types'), findsOneWidget);
+    expect(find.text('Choose a puzzle'), findsOneWidget);
   });
 }

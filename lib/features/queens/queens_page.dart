@@ -36,12 +36,16 @@ class _QueensPageState extends ConsumerState<QueensPage> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              Text('${puzzle.title} - ${puzzle.difficulty}'),
+              _MetaCard(title: puzzle.title, difficulty: puzzle.difficulty, size: size),
               const SizedBox(height: 12),
-              Text('Board: $size x $size'),
-              Text('Blocked cells: ${blocked.map((c) => '(${c[0]},${c[1]})').join(', ')}'),
+              _QueensBoard(size: size, blocked: blocked),
+              const SizedBox(height: 12),
+              Text(
+                'Blocked cells: ${blocked.map((c) => '(${c[0]}, ${c[1]})').join(', ')}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: 16),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: _done
                     ? null
                     : () async {
@@ -68,11 +72,96 @@ class _QueensPageState extends ConsumerState<QueensPage> {
                           );
                         }
                       },
-                child: Text(_done ? 'Synced' : 'Mark complete + sync'),
+                icon: Icon(_done ? Icons.check_circle : Icons.cloud_upload),
+                label: Text(_done ? 'Synced' : 'Mark complete + sync'),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _MetaCard extends StatelessWidget {
+  const _MetaCard({required this.title, required this.difficulty, required this.size});
+
+  final String title;
+  final String difficulty;
+  final int size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.emoji_events_outlined),
+          const SizedBox(width: 10),
+          Expanded(child: Text('$title ($size x $size)', style: Theme.of(context).textTheme.titleMedium)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3DF),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(difficulty),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QueensBoard extends StatelessWidget {
+  const _QueensBoard({required this.size, required this.blocked});
+
+  final int size;
+  final List<List<int>> blocked;
+
+  @override
+  Widget build(BuildContext context) {
+    final blockedSet = blocked.map((cell) => '${cell[0]}-${cell[1]}').toSet();
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Column(
+        children: List<Widget>.generate(size, (r) {
+          return Row(
+            children: List<Widget>.generate(size, (c) {
+              final key = '$r-$c';
+              final isBlocked = blockedSet.contains(key);
+              final isDark = (r + c).isEven;
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.all(1),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isBlocked
+                        ? const Color(0xFF3E3E3E)
+                        : (isDark ? const Color(0xFFEEF2F4) : const Color(0xFFDDE6EA)),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Center(
+                    child: isBlocked
+                        ? const Icon(Icons.block, size: 14, color: Colors.white)
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              );
+            }),
+          );
+        }),
       ),
     );
   }

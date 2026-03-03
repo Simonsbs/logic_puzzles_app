@@ -35,11 +35,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              Text('${puzzle.title} - ${puzzle.difficulty}'),
+              _MetaCard(title: puzzle.title, difficulty: puzzle.difficulty),
               const SizedBox(height: 12),
-              ...grid.map((row) => Text(row.map((v) => v == 0 ? '.' : '$v').join(' '))),
+              _SudokuBoard(grid: grid),
               const SizedBox(height: 16),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: _done
                     ? null
                     : () async {
@@ -66,11 +66,92 @@ class _SudokuPageState extends ConsumerState<SudokuPage> {
                           );
                         }
                       },
-                child: Text(_done ? 'Synced' : 'Mark complete + sync'),
+                icon: Icon(_done ? Icons.check_circle : Icons.cloud_upload),
+                label: Text(_done ? 'Synced' : 'Mark complete + sync'),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _MetaCard extends StatelessWidget {
+  const _MetaCard({required this.title, required this.difficulty});
+
+  final String title;
+  final String difficulty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.grid_view_rounded),
+          const SizedBox(width: 10),
+          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE6F5ED),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(difficulty),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SudokuBoard extends StatelessWidget {
+  const _SudokuBoard({required this.grid});
+
+  final List<List<int>> grid;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Column(
+        children: grid
+            .map(
+              (row) => Row(
+                children: row
+                    .map(
+                      (value) => Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.all(2),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: value == 0 ? const Color(0xFFF2F5F3) : const Color(0xFFE4F2EB),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              value == 0 ? '·' : '$value',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
+            .toList(),
       ),
     );
   }
