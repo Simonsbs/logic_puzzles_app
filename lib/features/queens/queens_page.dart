@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logic_puzzles_app/core/models/puzzle.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/models/user_progress.dart';
+import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 
 class QueensPage extends ConsumerStatefulWidget {
@@ -44,16 +45,28 @@ class _QueensPageState extends ConsumerState<QueensPage> {
                 onPressed: _done
                     ? null
                     : () async {
-                        await ref.read(progressSyncServiceProvider).syncProgress(
-                              UserProgress(
-                                puzzleId: puzzle.id,
-                                type: PuzzleType.queens,
-                                completed: true,
-                                bestSeconds: 295,
-                                streakDays: 5,
-                              ),
-                            );
-                        setState(() => _done = true);
+                        try {
+                          await ref.read(progressSyncServiceProvider).syncProgress(
+                                UserProgress(
+                                  puzzleId: puzzle.id,
+                                  type: PuzzleType.queens,
+                                  completed: true,
+                                  bestSeconds: 295,
+                                  streakDays: 5,
+                                ),
+                              );
+                          if (!mounted) {
+                            return;
+                          }
+                          setState(() => _done = true);
+                        } on ProgressSyncException catch (error) {
+                          if (!mounted) {
+                            return;
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(error.message)),
+                          );
+                        }
                       },
                 child: Text(_done ? 'Synced' : 'Mark complete + sync'),
               ),
