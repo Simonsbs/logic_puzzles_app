@@ -75,9 +75,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              _headerCard(),
-              const SizedBox(height: 12),
-              _controlRow(),
+              _statusAndControls(),
               const SizedBox(height: 12),
               _boardCard(),
               const SizedBox(height: 12),
@@ -91,9 +89,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     );
   }
 
-  Widget _headerCard() {
+  Widget _statusAndControls() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -102,16 +100,45 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(_puzzle.title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
-            runSpacing: 8,
+            runSpacing: 6,
             children: <Widget>[
-              _pill('Difficulty: ${_puzzle.difficulty}'),
               _pill('Time: ${_formatTime(_elapsedSeconds)}'),
               _pill('Hints: $_hintsUsed'),
-              _pill(_pencilMode ? 'Pencil mode ON' : 'Pencil mode OFF'),
+              _pill(_pencilMode ? 'Pencil ON' : 'Pencil OFF'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _paused ? _resumeGame : _pauseGame,
+                  icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 18),
+                  label: Text(_paused ? 'Resume' : 'Pause'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _solved || _paused
+                      ? null
+                      : () {
+                          setState(() => _pencilMode = !_pencilMode);
+                        },
+                  icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 18),
+                  label: const Text('Pencil'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _solved || _paused ? null : _useHint,
+                  icon: const Icon(Icons.lightbulb, size: 18),
+                  label: const Text('Hint'),
+                ),
+              ),
             ],
           ),
         ],
@@ -130,41 +157,8 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     );
   }
 
-  Widget _controlRow() {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: _paused ? _resumeGame : _pauseGame,
-            icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
-            label: Text(_paused ? 'Resume' : 'Pause'),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: _solved || _paused
-                ? null
-                : () {
-                    setState(() => _pencilMode = !_pencilMode);
-                  },
-            icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined),
-            label: Text(_pencilMode ? 'Pencil ON' : 'Pencil OFF'),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: _solved || _paused ? null : _useHint,
-            icon: const Icon(Icons.lightbulb),
-            label: const Text('Hint'),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _boardCard() {
+    final conflictCells = _conflictingCells();
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -183,7 +177,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
                   children: List<Widget>.generate(9, (col) {
                     return AspectRatio(
                       aspectRatio: 1,
-                      child: _buildCell(row, col),
+                      child: _buildCell(row, col, conflictCells),
                     );
                   }),
                 );
@@ -207,10 +201,12 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     );
   }
 
-  Widget _buildCell(int row, int col) {
+  Widget _buildCell(int row, int col, Set<String> conflictCells) {
+    final key = _cellKey(row, col);
     final value = _board[row][col];
     final selected = _selectedRow == row && _selectedCol == col;
-    final fixed = _fixedCells.contains(_cellKey(row, col));
+    final fixed = _fixedCells.contains(key);
+    final hasConflict = conflictCells.contains(key);
 
     final selectedValue = (_selectedRow != null && _selectedCol != null)
         ? _board[_selectedRow!][_selectedCol!]
@@ -220,14 +216,17 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     final boxShade = ((row ~/ 3) + (col ~/ 3)).isEven;
     Color background = boxShade ? const Color(0xFFF7FBF8) : const Color(0xFFEDF4F0);
 
+    if (fixed) {
+      background = const Color(0xFFE2ECE7);
+    }
     if (sameValue) {
       background = const Color(0xFFD9F2E7);
     }
-    if (selected) {
-      background = const Color(0xFFBDE7D1);
+    if (hasConflict) {
+      background = const Color(0xFFF8D4D4);
     }
-    if (fixed) {
-      background = const Color(0xFFE2ECE7);
+    if (selected) {
+      background = hasConflict ? const Color(0xFFF2A9A9) : const Color(0xFFBDE7D1);
     }
 
     final border = Border(
@@ -265,7 +264,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
                   style: TextStyle(
                     fontWeight: fixed ? FontWeight.w800 : FontWeight.w700,
                     fontSize: 24,
-                    color: fixed ? const Color(0xFF2E3A35) : const Color(0xFF0D6144),
+                    color: hasConflict
+                        ? const Color(0xFF8B1C1C)
+                        : (fixed ? const Color(0xFF2E3A35) : const Color(0xFF0D6144)),
                   ),
                 ),
               )
@@ -300,16 +301,16 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 9,
-      childAspectRatio: 1,
-      mainAxisSpacing: 6,
-      crossAxisSpacing: 6,
+      crossAxisCount: 3,
+      childAspectRatio: 2.2,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
       children: List<Widget>.generate(9, (i) {
         final n = i + 1;
         return FilledButton.tonal(
           onPressed: _paused || _solved ? null : () => _applyNumber(n),
-          style: FilledButton.styleFrom(padding: EdgeInsets.zero),
-          child: Text('$n', style: const TextStyle(fontWeight: FontWeight.w700)),
+          style: FilledButton.styleFrom(padding: EdgeInsets.zero, textStyle: const TextStyle(fontSize: 22)),
+          child: Text('$n', style: const TextStyle(fontWeight: FontWeight.w800)),
         );
       }),
     );
@@ -607,6 +608,70 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     }
 
     return true;
+  }
+
+  Set<String> _conflictingCells() {
+    final conflicts = <String>{};
+
+    for (var row = 0; row < 9; row++) {
+      final byValue = <int, List<int>>{};
+      for (var col = 0; col < 9; col++) {
+        final value = _board[row][col];
+        if (value == 0) {
+          continue;
+        }
+        byValue.putIfAbsent(value, () => <int>[]).add(col);
+      }
+      byValue.forEach((_, cols) {
+        if (cols.length > 1) {
+          for (final col in cols) {
+            conflicts.add(_cellKey(row, col));
+          }
+        }
+      });
+    }
+
+    for (var col = 0; col < 9; col++) {
+      final byValue = <int, List<int>>{};
+      for (var row = 0; row < 9; row++) {
+        final value = _board[row][col];
+        if (value == 0) {
+          continue;
+        }
+        byValue.putIfAbsent(value, () => <int>[]).add(row);
+      }
+      byValue.forEach((_, rows) {
+        if (rows.length > 1) {
+          for (final row in rows) {
+            conflicts.add(_cellKey(row, col));
+          }
+        }
+      });
+    }
+
+    for (var boxRow = 0; boxRow < 3; boxRow++) {
+      for (var boxCol = 0; boxCol < 3; boxCol++) {
+        final byValue = <int, List<(int, int)>>{};
+        for (var r = boxRow * 3; r < boxRow * 3 + 3; r++) {
+          for (var c = boxCol * 3; c < boxCol * 3 + 3; c++) {
+            final value = _board[r][c];
+            if (value == 0) {
+              continue;
+            }
+            byValue.putIfAbsent(value, () => <(int, int)>[]).add((r, c));
+          }
+        }
+        byValue.forEach((_, cells) {
+          if (cells.length > 1) {
+            for (final cell in cells) {
+              conflicts.add(_cellKey(cell.$1, cell.$2));
+            }
+          }
+        });
+      }
+    }
+
+    return conflicts;
   }
 }
 
