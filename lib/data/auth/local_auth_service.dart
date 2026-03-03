@@ -18,6 +18,7 @@ class LocalAuthService implements AuthService {
       id: 'guest-local',
       displayName: 'Guest Player',
       email: 'guest@local',
+      avatarUrl: null,
     );
     _controller.add(_currentUser);
     return _currentUser;

@@ -124,10 +124,17 @@ class _AppDrawer extends ConsumerWidget {
               ),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: const Color(0xFFBDE8D6),
-                child: Icon(
-                  user == null ? Icons.person_outline : Icons.person,
-                  color: const Color(0xFF0D2A22),
-                ),
+                backgroundImage:
+                    (user?.avatarUrl?.isNotEmpty ?? false)
+                        ? NetworkImage(user!.avatarUrl!)
+                        : null,
+                child:
+                    (user?.avatarUrl?.isNotEmpty ?? false)
+                        ? null
+                        : Icon(
+                          user == null ? Icons.person_outline : Icons.person,
+                          color: const Color(0xFF0D2A22),
+                        ),
               ),
             ),
             ListTile(

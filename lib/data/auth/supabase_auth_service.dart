@@ -63,6 +63,9 @@ class SupabaseAuthService implements AuthService {
       id: user.id,
       displayName: user.userMetadata?['full_name'] as String? ?? 'Player',
       email: user.email ?? '',
+      avatarUrl:
+          (user.userMetadata?['avatar_url'] as String?) ??
+          (user.userMetadata?['picture'] as String?),
     );
   }
 }
