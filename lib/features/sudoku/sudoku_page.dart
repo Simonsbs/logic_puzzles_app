@@ -176,14 +176,16 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
         aspectRatio: 1,
         child: Stack(
           children: <Widget>[
-            Column(
-              children: List<Widget>.generate(9, (row) {
-                return Expanded(
-                  child: Row(
-                    children: List<Widget>.generate(9, (col) {
-                      return Expanded(child: _buildCell(row, col));
-                    }),
-                  ),
+            Table(
+              defaultColumnWidth: const FlexColumnWidth(),
+              children: List<TableRow>.generate(9, (row) {
+                return TableRow(
+                  children: List<Widget>.generate(9, (col) {
+                    return AspectRatio(
+                      aspectRatio: 1,
+                      child: _buildCell(row, col),
+                    );
+                  }),
                 );
               }),
             ),
@@ -229,10 +231,20 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     }
 
     final border = Border(
-      left: BorderSide(width: col % 3 == 0 ? 2.5 : 0.7, color: const Color(0xFF5A6B64)),
-      right: BorderSide(width: col == 8 ? 2.5 : 0.7, color: const Color(0xFF5A6B64)),
-      top: BorderSide(width: row % 3 == 0 ? 2.5 : 0.7, color: const Color(0xFF5A6B64)),
-      bottom: BorderSide(width: row == 8 ? 2.5 : 0.7, color: const Color(0xFF5A6B64)),
+      left: BorderSide(
+        width: col == 0
+            ? 2.2
+            : (col % 3 == 0 ? 1.8 : 0.7),
+        color: const Color(0xFF5A6B64),
+      ),
+      top: BorderSide(
+        width: row == 0
+            ? 2.2
+            : (row % 3 == 0 ? 1.8 : 0.7),
+        color: const Color(0xFF5A6B64),
+      ),
+      right: BorderSide(width: col == 8 ? 2.2 : 0, color: const Color(0xFF5A6B64)),
+      bottom: BorderSide(width: row == 8 ? 2.2 : 0, color: const Color(0xFF5A6B64)),
     );
 
     return GestureDetector(
