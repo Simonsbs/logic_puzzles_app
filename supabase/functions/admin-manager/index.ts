@@ -166,8 +166,8 @@ async function getUserLogs(admin: ReturnType<typeof createClient>, userIdRaw: un
 
   const { data, error } = await admin
     .from('client_logs')
-    .select('id,user_id,log_type,message,payload,created_at')
-    .eq('user_id', userId)
+    .select('id,user_id,debug_user_id,log_type,message,payload,created_at')
+    .eq('debug_user_id', userId)
     .order('created_at', { ascending: false })
     .limit(100);
 

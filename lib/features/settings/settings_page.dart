@@ -236,14 +236,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _submitSupportLog() async {
     final user = ref.read(authServiceProvider).currentUser;
     final config = ref.read(appConfigProvider);
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sign in required to submit support logs'),
-        ),
-      );
-      return;
-    }
+    final debugUserId = user?.id ?? 'guest-local';
     if (!config.supabaseEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cloud logging requires Supabase mode')),
@@ -257,28 +250,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final lastSyncResult = prefs.getString('diag_last_sync_result');
       final lastSyncTime = prefs.getString('diag_last_sync_time');
 
-      await Supabase.instance.client.auth.refreshSession();
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
-        throw const ProgressSyncException(
-          'Session expired. Please sign in again.',
-          reasonCode: 'no_session',
-        );
-      }
-
       await Supabase.instance.client.functions.invoke(
         'submit-client-log',
-        headers: <String, String>{
-          'Authorization': 'Bearer ${session.accessToken}',
-        },
         body: <String, dynamic>{
           'log_type': 'sync_diagnostics',
+          'debug_user_id': debugUserId,
           'message':
-              'User submitted diagnostics from Settings (debug id: ${user.id})',
+              'User submitted diagnostics from Settings (debug id: $debugUserId)',
           'payload': <String, dynamic>{
-            'debug_user_id': user.id,
-            'display_name': user.displayName,
-            'email': user.email,
+            'debug_user_id': debugUserId,
+            'display_name': user?.displayName,
+            'email': user?.email,
             'platform': defaultTargetPlatform.name,
             'last_sync_result': lastSyncResult,
             'last_sync_time': lastSyncTime,

@@ -62,7 +62,8 @@ create index if not exists score_submission_events_user_puzzle_time_idx
 
 create table if not exists client_logs (
   id bigserial primary key,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  debug_user_id text,
   log_type text not null default 'support',
   message text not null,
   payload jsonb,
@@ -71,6 +72,9 @@ create table if not exists client_logs (
 
 create index if not exists client_logs_user_created_idx
   on client_logs (user_id, created_at desc);
+
+create index if not exists client_logs_debug_user_created_idx
+  on client_logs (debug_user_id, created_at desc);
 
 create index if not exists user_progress_user_type_updated_idx
   on user_progress (user_id, type, updated_at desc);
