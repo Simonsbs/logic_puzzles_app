@@ -10,7 +10,8 @@ class SupabaseProgressSyncService implements ProgressSyncService {
   @override
   Future<void> syncProgress(UserProgress progress) async {
     final user = _client.auth.currentUser;
-    if (user == null) {
+    final session = _client.auth.currentSession;
+    if (user == null || session == null) {
       throw const ProgressSyncException('Please sign in to sync progress.');
     }
 
@@ -26,20 +27,28 @@ class SupabaseProgressSyncService implements ProgressSyncService {
           'streak_days': progress.streakDays,
           'hints_used': progress.hintsUsed,
         },
+        headers: <String, String>{
+          'Authorization': 'Bearer ${session.accessToken}',
+        },
       );
-    } on FunctionException catch (_) {
-      throw const ProgressSyncException('Score sync failed. Please try again.');
+    } on FunctionException catch (error) {
+      final parsed = _parseFunctionError(error);
+      throw ProgressSyncException(
+        _reasonMessage(parsed.reasonCode, fallback: parsed.message),
+        reasonCode: parsed.reasonCode,
+      );
     }
 
     if (response.status < 200 || response.status >= 300) {
       final data = response.data;
-      final map = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+      final map =
+          data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
       final reason = map['reason_code'] as String?;
       throw ProgressSyncException(_reasonMessage(reason), reasonCode: reason);
     }
   }
 
-  String _reasonMessage(String? reasonCode) {
+  String _reasonMessage(String? reasonCode, {String? fallback}) {
     switch (reasonCode) {
       case 'too_fast':
         return 'Score rejected: completion time looks unrealistic.';
@@ -51,8 +60,45 @@ class SupabaseProgressSyncService implements ProgressSyncService {
         return 'Streak update rejected: invalid streak jump detected.';
       case 'puzzle_type_mismatch':
         return 'Submission rejected: puzzle data mismatch.';
+      case 'invalid_user_session':
+        return 'Session expired. Please sign out and sign in again.';
       default:
-        return 'Score sync failed. Please try again.';
+        return fallback ?? 'Score sync failed. Please try again.';
     }
   }
+
+  _ParsedFunctionError _parseFunctionError(FunctionException error) {
+    String? reasonCode;
+    String? message;
+
+    final details = error.details;
+    if (details is Map) {
+      final map = Map<String, dynamic>.from(details);
+      reasonCode = map['reason_code'] as String?;
+      message = map['error'] as String? ?? map['message'] as String?;
+    } else if (details is String && details.trim().isNotEmpty) {
+      message = details;
+    }
+
+    if ((reasonCode == null || reasonCode!.isEmpty) &&
+        ((error.reasonPhrase ?? '').toLowerCase().contains(
+          'invalid user session',
+        ) ||
+            (error.details?.toString().toLowerCase().contains(
+                  'invalid user session',
+                ) ??
+                false))) {
+      reasonCode = 'invalid_user_session';
+    }
+
+    message ??= error.reasonPhrase ?? error.toString();
+    return _ParsedFunctionError(reasonCode: reasonCode, message: message);
+  }
+}
+
+class _ParsedFunctionError {
+  const _ParsedFunctionError({this.reasonCode, this.message});
+
+  final String? reasonCode;
+  final String? message;
 }
