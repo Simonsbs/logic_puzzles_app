@@ -60,7 +60,6 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sudoku')),
       body: FutureBuilder<Puzzle>(
         future: ref.read(puzzleRepositoryProvider).getPuzzle(PuzzleType.sudoku, daily: true),
         builder: (context, snapshot) {
@@ -72,20 +71,47 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
             _setupGame(snapshot.data!);
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: <Widget>[
-              _statusAndControls(),
-              const SizedBox(height: 12),
-              _boardCard(),
-              const SizedBox(height: 12),
-              _numberPad(),
-              const SizedBox(height: 10),
-              _actionRow(),
-            ],
+          return SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+              children: <Widget>[
+                _compactTopBar(),
+                const SizedBox(height: 8),
+                _statusAndControls(),
+                const SizedBox(height: 10),
+                _boardCard(),
+                const SizedBox(height: 10),
+                _numberPad(),
+                const SizedBox(height: 8),
+                _actionRow(),
+              ],
+            ),
           );
         },
       ),
+    );
+  }
+
+  Widget _compactTopBar() {
+    return Row(
+      children: <Widget>[
+        IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back),
+          visualDensity: VisualDensity.compact,
+          tooltip: 'Back',
+        ),
+        const SizedBox(width: 4),
+        const Text(
+          'Sudoku',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const Spacer(),
+        Text(
+          _puzzle.difficulty,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF3D5A4F)),
+        ),
+      ],
     );
   }
 
@@ -182,12 +208,16 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
           ),
           if (_paused)
             Positioned.fill(
-              child: Container(
-                color: const Color(0xE0111519),
-                child: const Center(
-                  child: Text(
-                    'Paused',
-                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
+              child: GestureDetector(
+                onTap: _resumeGame,
+                child: Container(
+                  color: const Color(0xFF111519),
+                  child: const Center(
+                    child: Text(
+                      'Paused\nTap to resume',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ),
@@ -222,14 +252,15 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     if (inSelectedLine && !selected) {
       background = _pencilMode ? const Color(0xFFD7E4FF) : const Color(0xFFE1F0E9);
     }
+    final selectedShade = _pencilMode ? const Color(0xFFC7D9FF) : const Color(0xFFBDE7D1);
     if (sameValue) {
-      background = _pencilMode ? const Color(0xFFC7D9FF) : const Color(0xFFD9F2E7);
+      background = selectedShade;
     }
     if (hasConflict) {
       background = const Color(0xFFF8D4D4);
     }
     if (selected) {
-      background = hasConflict ? const Color(0xFFF2A9A9) : const Color(0xFFBDE7D1);
+      background = hasConflict ? const Color(0xFFF2A9A9) : selectedShade;
     }
 
     final border = Border(
