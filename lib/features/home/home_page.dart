@@ -14,11 +14,21 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authUserProvider).value;
+    final config = ref.watch(appConfigProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Logic Games'),
         actions: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Center(
+              child: Text(
+                config.supabaseEnabled ? 'Supabase' : 'Local mode',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
+          ),
           TextButton(
             onPressed: () async {
               final auth = ref.read(authServiceProvider);

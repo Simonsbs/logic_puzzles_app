@@ -1,13 +1,15 @@
 import 'package:logic_puzzles_app/core/models/puzzle.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 
-class PuzzleApiClient {
-  const PuzzleApiClient({required this.baseUrl});
+abstract class PuzzleApiClient {
+  Future<Puzzle?> fetchPuzzle(PuzzleType type, {required bool daily});
+}
 
-  final String baseUrl;
+class NullPuzzleApiClient implements PuzzleApiClient {
+  const NullPuzzleApiClient();
 
+  @override
   Future<Puzzle?> fetchPuzzle(PuzzleType type, {required bool daily}) async {
-    // TODO: replace with a real endpoint call. Keep nullable for offline fallback.
     return null;
   }
 }

@@ -1,41 +1,59 @@
 # Logic Puzzles App (Flutter)
 
-Free, no-ads, offline-first logic games app with cloud sync architecture.
+Free, no-ads, offline-first logic games app with Supabase backend support.
 
-## Scope in this starter
+## Current scope
 
-- Puzzle picker with:
+- Puzzle picker:
   - Sudoku (active)
   - Queens (active)
   - Other puzzle types marked as coming soon
-- Local puzzle storage and offline fallback
-- Remote puzzle source abstraction (daily/future/past ready)
-- Google sign-in service layer
-- Progress sync service interface
-- Leaderboards for:
-  - puzzle type
-  - specific puzzle
-  - streaks
+- Offline-first puzzle loading:
+  - fetch from Supabase when available
+  - fallback to local cached/static puzzles
+- Login:
+  - Google SSO via Supabase Auth OAuth
+- Sync:
+  - user progress synced to cloud
+- Leaderboards:
+  - per puzzle type
+  - per individual puzzle
+  - daily streaks
 
-## Recommended backend (simple and cost-aware)
+## Architecture
 
-Use Supabase first for fastest launch:
-- Auth: Google SSO
-- Database: Postgres for puzzles/progress/leaderboards
-- Edge functions or RPC for score validation and ranking updates
+- App runs in two modes:
+  - `Local mode` when Supabase env vars are missing
+  - `Supabase mode` when env vars are provided
+- Switching mode requires no code changes.
 
-This keeps the app 100% free for users and minimizes ops complexity for you.
+## Supabase setup
 
-## Run
+1. Create a Supabase project.
+2. In SQL editor, run [`supabase/schema.sql`](supabase/schema.sql).
+3. In Auth providers, enable Google OAuth and configure redirect URL.
+4. Configure mobile deep-link redirect:
+   - default used by app: `com.simonsbs.logicpuzzles://login-callback/`
+
+## Run locally (fallback mode)
 
 ```bash
 flutter pub get
 flutter run
 ```
 
+## Run with Supabase
+
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY \
+  --dart-define=SUPABASE_AUTH_REDIRECT_URL=com.simonsbs.logicpuzzles://login-callback/
+```
+
 ## Next implementation steps
 
-1. Replace `PuzzleApiClient` with real endpoints.
-2. Replace mock sync and leaderboard services with API-backed services.
-3. Add full Sudoku/Queens game engines and validation.
-4. Add conflict resolution rules for multi-device sync.
+1. Replace placeholder Sudoku/Queens screens with full interactive game engines.
+2. Add server-side validation function for score submissions.
+3. Add migration/versioning workflow for schema updates.
+4. Add integration tests for auth + sync + leaderboard queries.
