@@ -280,24 +280,25 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 3,
-      childAspectRatio: 2.2,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
+      childAspectRatio: 1.55,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
       children: List<Widget>.generate(9, (i) {
         final n = i + 1;
         final disabledByUsage = _isValueExhausted(n);
         return FilledButton.tonal(
           onPressed: _paused || _solved || disabledByUsage ? null : () => _applyNumber(n),
           style: FilledButton.styleFrom(
-            padding: EdgeInsets.zero,
-            textStyle: const TextStyle(fontSize: 22),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            textStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
             backgroundColor: _pencilMode ? const Color(0xFFDCE6FF) : null,
             foregroundColor: _pencilMode ? const Color(0xFF234AA5) : null,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           ),
           child: Text(
             '$n',
             style: TextStyle(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
               color: disabledByUsage ? const Color(0xFF8D9D95) : null,
             ),
           ),
