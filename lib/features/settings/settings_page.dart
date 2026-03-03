@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
+import 'package:logic_puzzles_app/core/models/user_progress.dart';
+import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -149,10 +151,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     setState(() => _syncing = true);
     try {
       final repository = ref.read(puzzleRepositoryProvider);
+      final allPuzzles = <String, PuzzleType>{};
       for (final type in PuzzleType.values.where((p) => p.isAvailableNow)) {
-        await repository.getPuzzles(type);
+        final puzzles = await repository.getPuzzles(type);
+        for (final puzzle in puzzles) {
+          allPuzzles[puzzle.id] = type;
+        }
         ref.invalidate(modeStreakProvider(type));
       }
+
+      final syncedCompletions = await _syncLocalCompletions(allPuzzles);
+
       ref.invalidate(showcasePuzzlesProvider);
       ref.invalidate(sudokuTypeLeaderboardProvider);
       ref.invalidate(queensTypeLeaderboardProvider);
@@ -160,9 +169,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Data sync complete')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            syncedCompletions > 0
+                ? 'Data sync complete • uploaded $syncedCompletions completions'
+                : 'Data sync complete',
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -175,6 +190,45 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         setState(() => _syncing = false);
       }
     }
+  }
+
+  Future<int> _syncLocalCompletions(Map<String, PuzzleType> puzzleTypes) async {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) {
+      return 0;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    var synced = 0;
+
+    for (final entry in puzzleTypes.entries) {
+      final puzzleId = entry.key;
+      final type = entry.value;
+      final completedKey = 'puzzle_completed_${user.id}_$puzzleId';
+      final localCompleted = prefs.getBool(completedKey) ?? false;
+      if (!localCompleted) {
+        continue;
+      }
+
+      try {
+        await ref
+            .read(progressSyncServiceProvider)
+            .syncProgress(
+              UserProgress(
+                puzzleId: puzzleId,
+                type: type,
+                completed: true,
+                bestSeconds: type == PuzzleType.queens ? 300 : 600,
+                streakDays: 1,
+              ),
+            );
+        synced++;
+      } on ProgressSyncException {
+        // Continue with next item; user receives overall sync result.
+      }
+    }
+
+    return synced;
   }
 
   Future<void> _clearLocalProgress() async {

@@ -268,6 +268,7 @@ class _LeaderboardSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(provider);
+    final user = ref.watch(authUserProvider).value;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -282,48 +283,54 @@ class _LeaderboardSection extends ConsumerWidget {
         children: <Widget>[
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 10),
-          data.when(
-            data: (rows) {
-              if (rows.isEmpty) {
-                return const Text(
-                  'No entries yet',
-                  style: TextStyle(color: Color(0xFF6D7C86)),
-                );
-              }
-              return Column(
-                children:
-                    rows
-                        .map(
-                          (row) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              children: <Widget>[
-                                CircleAvatar(
-                                  radius: 12,
-                                  backgroundColor: const Color(0xFFE9F6F0),
-                                  child: Text(
-                                    '${row.rank}',
-                                    style: const TextStyle(fontSize: 11),
+          if (user == null)
+            const Text(
+              'Sign in to sync scores and appear on leaderboards.',
+              style: TextStyle(color: Color(0xFF6D7C86)),
+            )
+          else
+            data.when(
+              data: (rows) {
+                if (rows.isEmpty) {
+                  return const Text(
+                    'No entries yet',
+                    style: TextStyle(color: Color(0xFF6D7C86)),
+                  );
+                }
+                return Column(
+                  children:
+                      rows
+                          .map(
+                            (row) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: <Widget>[
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: const Color(0xFFE9F6F0),
+                                    child: Text(
+                                      '${row.rank}',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    row.userName,
-                                    overflow: TextOverflow.ellipsis,
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      row.userName,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                                Text('${row.score} ${row.label}'),
-                              ],
+                                  Text('${row.score} ${row.label}'),
+                                ],
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-              );
-            },
-            loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text('Failed to load leaderboard'),
-          ),
+                          )
+                          .toList(),
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const Text('Failed to load leaderboard'),
+            ),
         ],
       ),
     );
