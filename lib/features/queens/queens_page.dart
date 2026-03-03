@@ -26,14 +26,19 @@ class _QueensPageState extends ConsumerState<QueensPage> {
         builder: (context) {
           final puzzle = widget.puzzle;
           final size = puzzle.payload['size'] as int;
-          final blocked = (puzzle.payload['blocked'] as List)
-              .map((e) => List<int>.from(e as List))
-              .toList();
+          final blocked =
+              (puzzle.payload['blocked'] as List)
+                  .map((e) => List<int>.from(e as List))
+                  .toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              _MetaCard(title: puzzle.title, difficulty: puzzle.difficulty, size: size),
+              _MetaCard(
+                title: puzzle.title,
+                difficulty: puzzle.difficulty,
+                size: size,
+              ),
               const SizedBox(height: 12),
               _QueensBoard(size: size, blocked: blocked),
               const SizedBox(height: 12),
@@ -43,33 +48,36 @@ class _QueensPageState extends ConsumerState<QueensPage> {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: _done
-                    ? null
-                    : () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        try {
-                          await ref.read(progressSyncServiceProvider).syncProgress(
-                                UserProgress(
-                                  puzzleId: puzzle.id,
-                                  type: PuzzleType.queens,
-                                  completed: true,
-                                  bestSeconds: 295,
-                                  streakDays: 5,
-                                ),
-                              );
-                          if (!mounted) {
-                            return;
+                onPressed:
+                    _done
+                        ? null
+                        : () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            await ref
+                                .read(progressSyncServiceProvider)
+                                .syncProgress(
+                                  UserProgress(
+                                    puzzleId: puzzle.id,
+                                    type: PuzzleType.queens,
+                                    completed: true,
+                                    bestSeconds: 295,
+                                    streakDays: 1,
+                                  ),
+                                );
+                            if (!mounted) {
+                              return;
+                            }
+                            setState(() => _done = true);
+                          } on ProgressSyncException catch (error) {
+                            if (!mounted) {
+                              return;
+                            }
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(error.message)),
+                            );
                           }
-                          setState(() => _done = true);
-                        } on ProgressSyncException catch (error) {
-                          if (!mounted) {
-                            return;
-                          }
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(error.message)),
-                          );
-                        }
-                      },
+                        },
                 icon: Icon(_done ? Icons.check_circle : Icons.cloud_upload),
                 label: Text(_done ? 'Synced' : 'Mark complete + sync'),
               ),
@@ -82,7 +90,11 @@ class _QueensPageState extends ConsumerState<QueensPage> {
 }
 
 class _MetaCard extends StatelessWidget {
-  const _MetaCard({required this.title, required this.difficulty, required this.size});
+  const _MetaCard({
+    required this.title,
+    required this.difficulty,
+    required this.size,
+  });
 
   final String title;
   final String difficulty;
@@ -101,7 +113,12 @@ class _MetaCard extends StatelessWidget {
         children: <Widget>[
           const Icon(Icons.emoji_events_outlined),
           const SizedBox(width: 10),
-          Expanded(child: Text('$title ($size x $size)', style: Theme.of(context).textTheme.titleMedium)),
+          Expanded(
+            child: Text(
+              '$title ($size x $size)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -145,15 +162,23 @@ class _QueensBoard extends StatelessWidget {
                   margin: const EdgeInsets.all(1),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: isBlocked
-                        ? const Color(0xFF3E3E3E)
-                        : (isDark ? const Color(0xFFEEF2F4) : const Color(0xFFDDE6EA)),
+                    color:
+                        isBlocked
+                            ? const Color(0xFF3E3E3E)
+                            : (isDark
+                                ? const Color(0xFFEEF2F4)
+                                : const Color(0xFFDDE6EA)),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Center(
-                    child: isBlocked
-                        ? const Icon(Icons.block, size: 14, color: Colors.white)
-                        : const SizedBox.shrink(),
+                    child:
+                        isBlocked
+                            ? const Icon(
+                              Icons.block,
+                              size: 14,
+                              color: Colors.white,
+                            )
+                            : const SizedBox.shrink(),
                   ),
                 ),
               );

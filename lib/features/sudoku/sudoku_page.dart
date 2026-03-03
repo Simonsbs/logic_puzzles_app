@@ -958,7 +958,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
               type: PuzzleType.sudoku,
               completed: true,
               bestSeconds: _elapsedSeconds,
-              streakDays: 5,
+              streakDays: 1,
               hintsUsed: _hintsUsed,
             ),
           );
