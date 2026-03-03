@@ -116,74 +116,17 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   }
 
   Widget _statusAndControls() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x14000000)),
+    return Center(
+      child: Text(
+        _formatTime(_elapsedSeconds),
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+          color: Color(0xFF1A2E26),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: <Widget>[
-              _pill('Time: ${_formatTime(_elapsedSeconds)}'),
-              _pill('Hints: $_hintsUsed'),
-              _pill(_pencilMode ? 'Pencil ON' : 'Pencil OFF'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: _paused ? _resumeGame : _pauseGame,
-                  icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 18),
-                  label: Text(_paused ? 'Resume' : 'Pause'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: _solved || _paused
-                      ? null
-                      : () {
-                          setState(() => _pencilMode = !_pencilMode);
-                        },
-                  icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 18),
-                  label: const Text('Pencil'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
-                    foregroundColor: _pencilMode ? Colors.white : null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: _solved || _paused ? null : _useHint,
-                  icon: const Icon(Icons.lightbulb, size: 18),
-                  label: const Text('Hint'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _pill(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6F2),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
     );
   }
 
@@ -364,22 +307,81 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   }
 
   Widget _actionRow() {
-    return Row(
+    return Column(
       children: <Widget>[
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _paused || _solved ? null : _clearSelected,
-            icon: const Icon(Icons.backspace_outlined),
-            label: const Text('Clear cell'),
-          ),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: _paused ? _resumeGame : _pauseGame,
+                icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 16),
+                label: Text(_paused ? 'Resume' : 'Pause'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: _solved || _paused
+                    ? null
+                    : () {
+                        setState(() => _pencilMode = !_pencilMode);
+                      },
+                icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 16),
+                label: const Text('Pencil'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+                  foregroundColor: _pencilMode ? Colors.white : null,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                onPressed: _solved || _paused ? null : _useHint,
+                icon: const Icon(Icons.lightbulb, size: 16),
+                label: Text('Hint $_hintsUsed'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
-            icon: const Icon(Icons.undo),
-            label: const Text('Undo'),
-          ),
+        const SizedBox(height: 8),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _paused || _solved ? null : _clearSelected,
+                icon: const Icon(Icons.backspace_outlined, size: 16),
+                label: const Text('Clear'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
+                icon: const Icon(Icons.undo, size: 16),
+                label: const Text('Undo'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const Spacer(),
+          ],
         ),
       ],
     );

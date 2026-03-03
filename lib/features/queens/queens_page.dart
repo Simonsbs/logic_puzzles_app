@@ -49,6 +49,7 @@ class _QueensPageState extends ConsumerState<QueensPage> {
                 onPressed: _done
                     ? null
                     : () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         try {
                           await ref.read(progressSyncServiceProvider).syncProgress(
                                 UserProgress(
@@ -67,7 +68,7 @@ class _QueensPageState extends ConsumerState<QueensPage> {
                           if (!mounted) {
                             return;
                           }
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(content: Text(error.message)),
                           );
                         }
