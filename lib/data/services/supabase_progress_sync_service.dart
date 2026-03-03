@@ -37,6 +37,9 @@ class SupabaseProgressSyncService implements ProgressSyncService {
       );
     } on FunctionException catch (error) {
       final parsed = _parseFunctionError(error);
+      if (parsed.reasonCode == 'invalid_user_session') {
+        await _client.auth.signOut();
+      }
       throw ProgressSyncException(
         _reasonMessage(parsed.reasonCode, fallback: parsed.message),
         reasonCode: parsed.reasonCode ?? 'function_error',
@@ -70,7 +73,7 @@ class SupabaseProgressSyncService implements ProgressSyncService {
       case 'puzzle_type_mismatch':
         return 'Submission rejected: puzzle data mismatch.';
       case 'invalid_user_session':
-        return 'Session expired. Please sign out and sign in again.';
+        return 'Session expired. You were signed out, please sign in again.';
       default:
         return fallback ?? 'Score sync failed. Please try again.';
     }
