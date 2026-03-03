@@ -9,6 +9,7 @@ class SupabaseProgressSyncService implements ProgressSyncService {
 
   @override
   Future<void> syncProgress(UserProgress progress) async {
+    await _client.auth.refreshSession();
     final user = _client.auth.currentUser;
     final session = _client.auth.currentSession;
     if (user == null || session == null) {
@@ -97,6 +98,14 @@ class SupabaseProgressSyncService implements ProgressSyncService {
                 ) ??
                 false))) {
       reasonCode = 'invalid_user_session';
+    }
+
+    if (reasonCode == null || reasonCode.isEmpty) {
+      if (error.status == 401) {
+        reasonCode = 'invalid_user_session';
+      } else if (error.status >= 500) {
+        reasonCode = 'server_error';
+      }
     }
 
     message ??= error.reasonPhrase ?? error.toString();

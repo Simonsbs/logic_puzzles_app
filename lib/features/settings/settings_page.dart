@@ -174,7 +174,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           .join(', ');
       final message =
           'Data sync complete • detected ${result.detected}, tried ${result.attempted}, uploaded ${result.synced}'
-          '${reasonSummary.isNotEmpty ? ' • failed [$reasonSummary]' : ''}';
+          '${reasonSummary.isNotEmpty ? ' • failed [$reasonSummary]' : ''}'
+          '${result.firstFailureMessage != null ? ' • ${result.firstFailureMessage}' : ''}';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -229,6 +230,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     var attempted = 0;
     var synced = 0;
     final failures = <String, int>{};
+    String? firstFailureMessage;
 
     for (final puzzleId in candidatePuzzleIds) {
       final type = puzzleTypes[puzzleId];
@@ -253,6 +255,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       } on ProgressSyncException catch (error) {
         final reason = error.reasonCode ?? 'sync_error';
         failures[reason] = (failures[reason] ?? 0) + 1;
+        firstFailureMessage ??= error.message;
       }
     }
 
@@ -261,6 +264,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       attempted: attempted,
       synced: synced,
       failures: failures,
+      firstFailureMessage: firstFailureMessage,
     );
   }
 
@@ -402,10 +406,12 @@ class _BackfillResult {
     required this.attempted,
     required this.synced,
     this.failures = const <String, int>{},
+    this.firstFailureMessage,
   });
 
   final int detected;
   final int attempted;
   final int synced;
   final Map<String, int> failures;
+  final String? firstFailureMessage;
 }
