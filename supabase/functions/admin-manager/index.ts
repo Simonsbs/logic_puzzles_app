@@ -32,6 +32,8 @@ Deno.serve(async (req) => {
         return await summary(admin);
       case 'list_puzzles':
         return await listPuzzles(admin, body.type);
+      case 'get_user_logs':
+        return await getUserLogs(admin, body.user_id);
       case 'upsert_puzzle':
         return await upsertPuzzle(admin, body.puzzle);
       case 'delete_puzzle':
@@ -154,6 +156,26 @@ async function listPuzzles(admin: ReturnType<typeof createClient>, typeRaw: unkn
     return json(500, { error: 'Failed to list puzzles', detail: error.message });
   }
   return json(200, { ok: true, puzzles: data ?? [] });
+}
+
+async function getUserLogs(admin: ReturnType<typeof createClient>, userIdRaw: unknown): Promise<Response> {
+  const userId = String(userIdRaw ?? '').trim();
+  if (!userId) {
+    return json(200, { ok: true, logs: [] });
+  }
+
+  const { data, error } = await admin
+    .from('client_logs')
+    .select('id,user_id,log_type,message,payload,created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    return json(500, { error: 'Failed to load user logs', detail: error.message });
+  }
+
+  return json(200, { ok: true, logs: data ?? [] });
 }
 
 async function upsertPuzzle(admin: ReturnType<typeof createClient>, puzzleRaw: unknown): Promise<Response> {

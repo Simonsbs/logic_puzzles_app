@@ -92,7 +92,7 @@ class SupabaseProgressSyncService implements ProgressSyncService {
       message = details;
     }
 
-    if ((reasonCode == null || reasonCode!.isEmpty) &&
+    if (((reasonCode?.isEmpty) ?? true) &&
         ((error.reasonPhrase ?? '').toLowerCase().contains(
               'invalid user session',
             ) ||

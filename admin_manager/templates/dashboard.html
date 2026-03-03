@@ -129,6 +129,31 @@
     </div>
 
     <div class="card" style="margin-top:12px;">
+      <h3 style="margin:0 0 10px;">User Support Logs</h3>
+      <form method="get" action="/" class="row" style="margin-bottom:10px;">
+        <input type="hidden" name="type" value="{{ selected_type }}" />
+        <input name="log_user_id" value="{{ log_user_id or '' }}" placeholder="Enter debug user id (UUID)" />
+        <button type="submit">Load Logs</button>
+      </form>
+      <table>
+        <thead><tr><th>Time</th><th>Type</th><th>Message</th><th>Payload</th></tr></thead>
+        <tbody>
+          {% for log in user_logs %}
+            <tr>
+              <td>{{ log.created_at }}</td>
+              <td>{{ log.log_type }}</td>
+              <td>{{ log.message }}</td>
+              <td><pre>{{ log.payload or {} }}</pre></td>
+            </tr>
+          {% endfor %}
+          {% if not user_logs %}
+            <tr><td colspan="4"><span class="k">No logs loaded. Enter a debug user id and click Load Logs.</span></td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
       <div class="tabs row">
         <a class="{% if selected_type == 'sudoku' %}active{% endif %}" href="/?type=sudoku">Sudoku</a>
         <a class="{% if selected_type == 'queens' %}active{% endif %}" href="/?type=queens">Queens</a>

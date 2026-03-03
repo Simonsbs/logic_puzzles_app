@@ -60,6 +60,18 @@ create index if not exists score_submission_events_user_time_idx
 create index if not exists score_submission_events_user_puzzle_time_idx
   on score_submission_events (user_id, puzzle_id, created_at desc);
 
+create table if not exists client_logs (
+  id bigserial primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  log_type text not null default 'support',
+  message text not null,
+  payload jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists client_logs_user_created_idx
+  on client_logs (user_id, created_at desc);
+
 create index if not exists user_progress_user_type_updated_idx
   on user_progress (user_id, type, updated_at desc);
 
@@ -122,6 +134,7 @@ group by user_id;
 alter table puzzles enable row level security;
 alter table user_progress enable row level security;
 alter table score_submission_events enable row level security;
+alter table client_logs enable row level security;
 
 drop policy if exists puzzles_read_all on puzzles;
 create policy puzzles_read_all
@@ -136,4 +149,9 @@ using (auth.uid() = user_id);
 drop policy if exists score_events_owner_read on score_submission_events;
 create policy score_events_owner_read
 on score_submission_events for select
+using (auth.uid() = user_id);
+
+drop policy if exists client_logs_owner_read on client_logs;
+create policy client_logs_owner_read
+on client_logs for select
 using (auth.uid() = user_id);

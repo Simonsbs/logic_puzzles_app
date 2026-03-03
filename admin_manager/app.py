@@ -60,11 +60,17 @@ def dashboard() -> str:
     usage = summary.get('usage', {})
     leaderboards = summary.get('leaderboards', {})
     puzzle_type = request.args.get('type', 'sudoku').strip().lower()
+    log_user_id = request.args.get('log_user_id', '').strip()
+    user_logs = []
+    if log_user_id:
+        user_logs = client.call('get_user_logs', user_id=log_user_id).get('logs', [])
     puzzles = client.call('list_puzzles', type=puzzle_type).get('puzzles', [])
     return render_template(
         'dashboard.html',
         usage=usage,
         leaderboards=leaderboards,
+        log_user_id=log_user_id,
+        user_logs=user_logs,
         puzzles=puzzles,
         selected_type=puzzle_type,
     )

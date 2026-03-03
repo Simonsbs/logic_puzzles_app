@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/models/user_progress.dart';
 import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -16,6 +18,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _syncing = false;
+  bool _submittingLog = false;
   bool _deleting = false;
   bool _clearing = false;
 
@@ -85,6 +88,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     'Refresh puzzles from cloud and update local cache',
                   ),
                   onTap: _syncing ? null : _syncDataNow,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading:
+                      _submittingLog
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.bug_report_outlined),
+                  title: const Text('Submit support log'),
+                  subtitle: const Text(
+                    'Uploads diagnostics to cloud for support by debug ID',
+                  ),
+                  onTap: _submittingLog ? null : _submitSupportLog,
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -176,6 +195,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           'Data sync complete • detected ${result.detected}, tried ${result.attempted}, uploaded ${result.synced}'
           '${reasonSummary.isNotEmpty ? ' • failed [$reasonSummary]' : ''}'
           '${result.firstFailureMessage != null ? ' • ${result.firstFailureMessage}' : ''}';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('diag_last_sync_result', message);
+      await prefs.setString(
+        'diag_last_sync_time',
+        DateTime.now().toUtc().toIso8601String(),
+      );
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -189,6 +217,78 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } finally {
       if (mounted) {
         setState(() => _syncing = false);
+      }
+    }
+  }
+
+  Future<void> _submitSupportLog() async {
+    final user = ref.read(authServiceProvider).currentUser;
+    final config = ref.read(appConfigProvider);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sign in required to submit support logs'),
+        ),
+      );
+      return;
+    }
+    if (!config.supabaseEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cloud logging requires Supabase mode')),
+      );
+      return;
+    }
+
+    setState(() => _submittingLog = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastSyncResult = prefs.getString('diag_last_sync_result');
+      final lastSyncTime = prefs.getString('diag_last_sync_time');
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        throw const ProgressSyncException(
+          'Session expired. Please sign in again.',
+          reasonCode: 'no_session',
+        );
+      }
+
+      await Supabase.instance.client.functions.invoke(
+        'submit-client-log',
+        headers: <String, String>{
+          'Authorization': 'Bearer ${session.accessToken}',
+        },
+        body: <String, dynamic>{
+          'log_type': 'sync_diagnostics',
+          'message':
+              'User submitted diagnostics from Settings (debug id: ${user.id})',
+          'payload': <String, dynamic>{
+            'debug_user_id': user.id,
+            'display_name': user.displayName,
+            'email': user.email,
+            'platform': defaultTargetPlatform.name,
+            'last_sync_result': lastSyncResult,
+            'last_sync_time': lastSyncTime,
+            'submitted_at': DateTime.now().toUtc().toIso8601String(),
+          },
+        },
+      );
+
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Support log uploaded successfully')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Support log upload failed: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _submittingLog = false);
       }
     }
   }
