@@ -39,7 +39,7 @@ class PuzzleListPage extends ConsumerWidget {
               return _PuzzleTile(
                 puzzle: puzzle,
                 status: status,
-                onTap: () => _openPuzzle(context, puzzle),
+                onTap: () => _openPuzzle(context, puzzles, index, status),
               );
             },
           );
@@ -54,10 +54,50 @@ class PuzzleListPage extends ConsumerWidget {
     return (puzzles, progress);
   }
 
-  void _openPuzzle(BuildContext context, Puzzle puzzle) {
+  void _openPuzzle(
+    BuildContext context,
+    List<Puzzle> puzzles,
+    int index,
+    PuzzleProgressStatus? status,
+  ) async {
+    if (status?.completed == true) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Replay solved puzzle?'),
+          content: const Text('Your previous result will be replaced with this new run.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Replay'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+    if (!context.mounted) {
+      return;
+    }
+
+    final puzzle = puzzles[index];
     switch (puzzle.type) {
       case PuzzleType.sudoku:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => SudokuPage(puzzle: puzzle)));
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SudokuPage(
+              puzzle: puzzle,
+              puzzleSequence: puzzles,
+              puzzleIndex: index,
+            ),
+          ),
+        );
       case PuzzleType.queens:
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => QueensPage(puzzle: puzzle)));
       case PuzzleType.kakuro:
@@ -78,6 +118,13 @@ class _PuzzleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completed = status?.completed ?? false;
+    final inProgress = status?.inProgress ?? false;
+    final leadingIcon = completed
+        ? Icons.check_circle
+        : (inProgress ? Icons.timelapse : Icons.radio_button_unchecked);
+    final leadingColor = completed
+        ? const Color(0xFF198754)
+        : (inProgress ? const Color(0xFF275EA8) : const Color(0xFF8A9A92));
     final dateLabel = puzzle.publishedAt == null
         ? 'Unknown date'
         : '${puzzle.publishedAt!.year}-${puzzle.publishedAt!.month.toString().padLeft(2, '0')}-${puzzle.publishedAt!.day.toString().padLeft(2, '0')}';
@@ -94,7 +141,7 @@ class _PuzzleTile extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(completed ? Icons.check_circle : Icons.radio_button_unchecked, color: completed ? const Color(0xFF198754) : const Color(0xFF8A9A92)),
+            Icon(leadingIcon, color: leadingColor),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -115,6 +162,18 @@ class _PuzzleTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: const Text('Done', style: TextStyle(color: Color(0xFF198754), fontWeight: FontWeight.w700)),
+              ),
+            if (inProgress)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F0FA),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'In progress',
+                  style: TextStyle(color: Color(0xFF275EA8), fontWeight: FontWeight.w700),
+                ),
               ),
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right),

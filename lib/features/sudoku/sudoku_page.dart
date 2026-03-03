@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:confetti/confetti.dart';
 import 'package:logic_puzzles_app/core/models/puzzle.dart';
 import 'package:logic_puzzles_app/core/models/sudoku_session_state.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
@@ -10,15 +12,23 @@ import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
 
 class SudokuPage extends ConsumerStatefulWidget {
-  const SudokuPage({super.key, required this.puzzle});
+  const SudokuPage({
+    super.key,
+    required this.puzzle,
+    required this.puzzleSequence,
+    required this.puzzleIndex,
+  });
 
   final Puzzle puzzle;
+  final List<Puzzle> puzzleSequence;
+  final int puzzleIndex;
 
   @override
   ConsumerState<SudokuPage> createState() => _SudokuPageState();
 }
 
-class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObserver {
+class _SudokuPageState extends ConsumerState<SudokuPage>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _initialized = false;
   bool _paused = false;
   bool _pencilMode = false;
@@ -39,17 +49,21 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
   final List<_SudokuSnapshot> _history = <_SudokuSnapshot>[];
   Timer? _timer;
+  late ConfettiController _confettiController;
+  bool _showCelebration = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _confettiController = ConfettiController(duration: const Duration(milliseconds: 1200));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _confettiController.dispose();
     unawaited(_persistSession());
     super.dispose();
   }
@@ -98,24 +112,43 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
             }
             numberPadHeight = numberPadHeight.clamp(minNumberPadHeight, 190.0).toDouble();
 
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(
-                horizontalPadding,
-                topPadding,
-                horizontalPadding,
-                bottomPadding,
-              ),
-              child: Column(
-                children: <Widget>[
-                  SizedBox(height: topBarHeight, child: _compactTopBar()),
-                  const SizedBox(height: gap),
-                  SizedBox(height: boardSize, width: boardSize, child: _boardCard()),
-                  const SizedBox(height: gap),
-                  SizedBox(height: numberPadHeight, child: _numberPad()),
-                  const SizedBox(height: gap),
-                  SizedBox(height: actionHeight, child: _actionRow()),
-                ],
-              ),
+            return Stack(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    topPadding,
+                    horizontalPadding,
+                    bottomPadding,
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      SizedBox(height: topBarHeight, child: _compactTopBar()),
+                      const SizedBox(height: gap),
+                      SizedBox(height: boardSize, width: boardSize, child: _boardCard()),
+                      const SizedBox(height: gap),
+                      SizedBox(height: numberPadHeight, child: _numberPad()),
+                      const SizedBox(height: gap),
+                      SizedBox(height: actionHeight, child: _actionRow()),
+                    ],
+                  ),
+                ),
+                if (_showCelebration)
+                  IgnorePointer(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: ConfettiWidget(
+                        confettiController: _confettiController,
+                        blastDirectionality: BlastDirectionality.explosive,
+                        emissionFrequency: 0.06,
+                        numberOfParticles: 22,
+                        maxBlastForce: 18,
+                        minBlastForce: 8,
+                        gravity: 0.22,
+                      ),
+                    ),
+                  ),
+              ],
             );
           },
         ),
@@ -687,6 +720,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     _timer?.cancel();
     _solved = true;
     unawaited(ref.read(puzzleSessionServiceProvider).clearSudokuSession(puzzleId: _puzzle.id));
+    _playCelebration();
     _syncCompletion();
   }
 
@@ -781,19 +815,57 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       return;
     }
 
-    showDialog<void>(
+    final action = await showDialog<_CompletionAction>(
       context: context,
+      barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: const Text('Puzzle solved'),
-        content: Text('Time: ${_formatTime(_elapsedSeconds)}\nHints used: $_hintsUsed'),
+        content: Text(
+          'Time: ${_formatTime(_elapsedSeconds)}\nHints used: $_hintsUsed',
+        ),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Nice'),
+            onPressed: () => Navigator.of(context).pop(_CompletionAction.modeSelection),
+            child: const Text('Mode Selection'),
           ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_CompletionAction.puzzleSelection),
+            child: const Text('Puzzle Selection'),
+          ),
+          if (_hasNextPuzzle)
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(_CompletionAction.nextPuzzle),
+              child: const Text('Next Puzzle'),
+            ),
         ],
       ),
     );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case _CompletionAction.modeSelection:
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      case _CompletionAction.puzzleSelection:
+        Navigator.of(context).maybePop();
+      case _CompletionAction.nextPuzzle:
+        if (!_hasNextPuzzle) {
+          return;
+        }
+        final nextIndex = widget.puzzleIndex + 1;
+        final next = widget.puzzleSequence[nextIndex];
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => SudokuPage(
+              puzzle: next,
+              puzzleSequence: widget.puzzleSequence,
+              puzzleIndex: nextIndex,
+            ),
+          ),
+        );
+    }
   }
 
   String _formatTime(int totalSeconds) {
@@ -977,6 +1049,25 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
     return conflicts;
   }
+
+  bool get _hasNextPuzzle => widget.puzzleIndex < widget.puzzleSequence.length - 1;
+
+  void _playCelebration() {
+    SystemSound.play(SystemSoundType.alert);
+    setState(() => _showCelebration = true);
+    _confettiController.play();
+    Future<void>.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) {
+        setState(() => _showCelebration = false);
+      }
+    });
+  }
+}
+
+enum _CompletionAction {
+  modeSelection,
+  puzzleSelection,
+  nextPuzzle,
 }
 
 class _SudokuSnapshot {

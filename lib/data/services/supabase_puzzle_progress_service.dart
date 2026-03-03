@@ -18,7 +18,7 @@ class SupabasePuzzleProgressService implements PuzzleProgressService {
     try {
       final response = await _client
           .from('user_progress')
-          .select('puzzle_id, completed, best_seconds, updated_at')
+          .select('puzzle_id, completed, best_seconds, updated_at, session_elapsed_seconds')
           .eq('user_id', user.id)
           .eq('type', type.name);
 
@@ -26,8 +26,11 @@ class SupabasePuzzleProgressService implements PuzzleProgressService {
       final map = <String, PuzzleProgressStatus>{};
       for (final row in rows) {
         final puzzleId = row['puzzle_id'] as String;
+        final completed = row['completed'] as bool? ?? false;
+        final elapsed = (row['session_elapsed_seconds'] as num?)?.toInt() ?? 0;
         map[puzzleId] = PuzzleProgressStatus(
-          completed: row['completed'] as bool? ?? false,
+          completed: completed,
+          inProgress: !completed && elapsed > 0,
           bestSeconds: (row['best_seconds'] as num?)?.toInt() ?? 0,
           updatedAt: DateTime.tryParse(row['updated_at'] as String? ?? ''),
         );
