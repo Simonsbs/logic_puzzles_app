@@ -402,7 +402,14 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
     for (final puzzle in puzzles) {
       final localCompleted =
           prefs.getBool('puzzle_completed_${userId}_${puzzle.id}') ?? false;
+      final localCompletedAtRaw = prefs.getString(
+        'puzzle_completed_${userId}_${puzzle.id}_at',
+      );
       final remoteStatus = merged[puzzle.id];
+      final localCompletedAt =
+          localCompletedAtRaw == null
+              ? null
+              : DateTime.tryParse(localCompletedAtRaw);
 
       var localInProgress = false;
       if (puzzle.type == PuzzleType.sudoku) {
@@ -422,7 +429,7 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
         completed: completed,
         inProgress: inProgress,
         bestSeconds: bestSeconds,
-        updatedAt: remoteStatus?.updatedAt,
+        updatedAt: remoteStatus?.updatedAt ?? localCompletedAt,
       );
     }
 
@@ -480,7 +487,15 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
               a.puzzle.difficulty,
             ).compareTo(_difficultyRank(b.puzzle.difficulty)),
           );
-      final solvedCount = rows.where((row) => row.status.completed).length;
+      final solvedCount =
+          rows
+              .where(
+                (row) => _completedOnSameDay(
+                  completedAt: row.status.updatedAt,
+                  day: dayDate[key]!,
+                ),
+              )
+              .length;
       final inProgressCount = rows.where((row) => row.status.inProgress).length;
       sections.add(
         _PuzzleDaySection(
@@ -590,6 +605,20 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
   }
 
   DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+  bool _completedOnSameDay({
+    required DateTime? completedAt,
+    required DateTime day,
+  }) {
+    if (completedAt == null) {
+      return false;
+    }
+    final completionDay = _dateOnly(completedAt);
+    final targetDay = _dateOnly(day);
+    return completionDay.year == targetDay.year &&
+        completionDay.month == targetDay.month &&
+        completionDay.day == targetDay.day;
+  }
 
   String _dayKey(DateTime date) =>
       '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

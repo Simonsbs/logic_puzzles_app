@@ -57,7 +57,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _confettiController = ConfettiController(duration: const Duration(milliseconds: 1200));
+    _confettiController = ConfettiController(
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   @override
@@ -71,7 +73,8 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       _pauseGame();
     }
   }
@@ -96,22 +99,38 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
             const minNumberPadHeight = 72.0;
             const minBoardSize = 150.0;
 
-            final availableHeight = constraints.maxHeight - topPadding - bottomPadding;
+            final availableHeight =
+                constraints.maxHeight - topPadding - bottomPadding;
             final usableWidth = constraints.maxWidth - (horizontalPadding * 2);
-            var boardSize = (availableHeight -
-                    topBarHeight -
-                    actionHeight -
-                    targetNumberPadHeight -
-                    (gap * 3))
-                .clamp(minBoardSize, usableWidth)
-                .toDouble();
-            var numberPadHeight = availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
+            var boardSize =
+                (availableHeight -
+                        topBarHeight -
+                        actionHeight -
+                        targetNumberPadHeight -
+                        (gap * 3))
+                    .clamp(minBoardSize, usableWidth)
+                    .toDouble();
+            var numberPadHeight =
+                availableHeight -
+                topBarHeight -
+                actionHeight -
+                boardSize -
+                (gap * 3);
             if (numberPadHeight < minNumberPadHeight) {
               final needed = minNumberPadHeight - numberPadHeight;
-              boardSize = (boardSize - needed).clamp(minBoardSize, usableWidth).toDouble();
-              numberPadHeight = availableHeight - topBarHeight - actionHeight - boardSize - (gap * 3);
+              boardSize =
+                  (boardSize - needed)
+                      .clamp(minBoardSize, usableWidth)
+                      .toDouble();
+              numberPadHeight =
+                  availableHeight -
+                  topBarHeight -
+                  actionHeight -
+                  boardSize -
+                  (gap * 3);
             }
-            numberPadHeight = numberPadHeight.clamp(minNumberPadHeight, 190.0).toDouble();
+            numberPadHeight =
+                numberPadHeight.clamp(minNumberPadHeight, 190.0).toDouble();
 
             return Stack(
               children: <Widget>[
@@ -126,7 +145,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                     children: <Widget>[
                       SizedBox(height: topBarHeight, child: _compactTopBar()),
                       const SizedBox(height: gap),
-                      SizedBox(height: boardSize, width: boardSize, child: _boardCard()),
+                      SizedBox(
+                        height: boardSize,
+                        width: boardSize,
+                        child: _boardCard(),
+                      ),
                       const SizedBox(height: gap),
                       SizedBox(height: numberPadHeight, child: _numberPad()),
                       const SizedBox(height: gap),
@@ -190,7 +213,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
         const SizedBox(width: 10),
         Text(
           _puzzle.difficulty,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF3D5A4F)),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF3D5A4F),
+          ),
         ),
       ],
     );
@@ -225,7 +252,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                     child: Text(
                       'Paused\nTap to resume',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -242,26 +273,33 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     final selected = _selectedRow == row && _selectedCol == col;
     final fixed = _fixedCells.contains(key);
     final hasConflict = conflictCells.contains(key);
-    final inSelectedLine = (_selectedRow != null && _selectedCol != null) &&
+    final inSelectedLine =
+        (_selectedRow != null && _selectedCol != null) &&
         (row == _selectedRow || col == _selectedCol);
 
-    final selectedValue = (_selectedRow != null && _selectedCol != null)
-        ? _board[_selectedRow!][_selectedCol!]
-        : 0;
+    final selectedValue =
+        (_selectedRow != null && _selectedCol != null)
+            ? _board[_selectedRow!][_selectedCol!]
+            : 0;
     final sameValue = selectedValue != 0 && value == selectedValue;
 
     final boxShade = ((row ~/ 3) + (col ~/ 3)).isEven;
-    final baseA = _pencilMode ? const Color(0xFFF2F6FF) : const Color(0xFFF7FBF8);
-    final baseB = _pencilMode ? const Color(0xFFEAF0FF) : const Color(0xFFEDF4F0);
+    final baseA =
+        _pencilMode ? const Color(0xFFF2F6FF) : const Color(0xFFF7FBF8);
+    final baseB =
+        _pencilMode ? const Color(0xFFEAF0FF) : const Color(0xFFEDF4F0);
     Color background = boxShade ? baseA : baseB;
 
     if (fixed) {
-      background = _pencilMode ? const Color(0xFFE2EAFF) : const Color(0xFFE2ECE7);
+      background =
+          _pencilMode ? const Color(0xFFE2EAFF) : const Color(0xFFE2ECE7);
     }
     if (inSelectedLine && !selected) {
-      background = _pencilMode ? const Color(0xFFD7E4FF) : const Color(0xFFE1F0E9);
+      background =
+          _pencilMode ? const Color(0xFFD7E4FF) : const Color(0xFFE1F0E9);
     }
-    final selectedShade = _pencilMode ? const Color(0xFFC7D9FF) : const Color(0xFFBDE7D1);
+    final selectedShade =
+        _pencilMode ? const Color(0xFFC7D9FF) : const Color(0xFFBDE7D1);
     if (sameValue) {
       background = selectedShade;
     }
@@ -274,15 +312,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
 
     final border = Border(
       left: BorderSide(
-        width: col == 0
-            ? 2.2
-            : (col % 3 == 0 ? 1.8 : 0.7),
+        width: col == 0 ? 2.2 : (col % 3 == 0 ? 1.8 : 0.7),
         color: _pencilMode ? const Color(0xFF5F6CA0) : const Color(0xFF5A6B64),
       ),
       top: BorderSide(
-        width: row == 0
-            ? 2.2
-            : (row % 3 == 0 ? 1.8 : 0.7),
+        width: row == 0 ? 2.2 : (row % 3 == 0 ? 1.8 : 0.7),
         color: _pencilMode ? const Color(0xFF5F6CA0) : const Color(0xFF5A6B64),
       ),
       right: BorderSide(
@@ -296,32 +330,39 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     );
 
     return GestureDetector(
-      onTap: _paused || _solved
-          ? null
-          : () {
-              setState(() {
-                _selectedRow = row;
-                _selectedCol = col;
-              });
-            },
+      onTap:
+          _paused || _solved
+              ? null
+              : () {
+                setState(() {
+                  _selectedRow = row;
+                  _selectedCol = col;
+                });
+              },
       child: Container(
         decoration: BoxDecoration(color: background, border: border),
-        child: value != 0
-            ? Center(
-                child: Text(
-                  '$value',
-                  style: TextStyle(
-                    fontWeight: fixed ? FontWeight.w800 : FontWeight.w700,
-                    fontSize: 24,
-                    color: hasConflict
-                        ? const Color(0xFF8B1C1C)
-                        : (fixed
-                              ? (_pencilMode ? const Color(0xFF2D3352) : const Color(0xFF2E3A35))
-                              : (_pencilMode ? const Color(0xFF234AA5) : const Color(0xFF0D6144))),
+        child:
+            value != 0
+                ? Center(
+                  child: Text(
+                    '$value',
+                    style: TextStyle(
+                      fontWeight: fixed ? FontWeight.w800 : FontWeight.w700,
+                      fontSize: 24,
+                      color:
+                          hasConflict
+                              ? const Color(0xFF8B1C1C)
+                              : (fixed
+                                  ? (_pencilMode
+                                      ? const Color(0xFF2D3352)
+                                      : const Color(0xFF2E3A35))
+                                  : (_pencilMode
+                                      ? const Color(0xFF234AA5)
+                                      : const Color(0xFF0D6144))),
+                    ),
                   ),
-                ),
-              )
-            : _buildPencilMarks(row, col),
+                )
+                : _buildPencilMarks(row, col),
       ),
     );
   }
@@ -341,7 +382,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
         return Center(
           child: Text(
             marks.contains(n) ? '$n' : '',
-            style: const TextStyle(fontSize: 10, color: Color(0xFF46695C), fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF46695C),
+              fontWeight: FontWeight.w700,
+            ),
           ),
         );
       }),
@@ -359,13 +404,21 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
         final n = i + 1;
         final disabledByUsage = _isValueExhausted(n);
         return FilledButton.tonal(
-          onPressed: _paused || _solved || disabledByUsage ? null : () => _applyNumber(n),
+          onPressed:
+              _paused || _solved || disabledByUsage
+                  ? null
+                  : () => _applyNumber(n),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 6),
-            textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            textStyle: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
             backgroundColor: _pencilMode ? const Color(0xFFDCE6FF) : null,
             foregroundColor: _pencilMode ? const Color(0xFF234AA5) : null,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           child: Text(
             '$n',
@@ -389,28 +442,48 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
               Expanded(
                 child: FilledButton.tonalIcon(
                   onPressed: _paused ? _resumeGame : _pauseGame,
-                  icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 14),
+                  icon: Icon(
+                    _paused ? Icons.play_arrow : Icons.pause,
+                    size: 14,
+                  ),
                   label: Text(_paused ? 'Resume' : 'Pause'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 4),
               Expanded(
                 child: FilledButton.tonalIcon(
-                  onPressed: _solved || _paused
-                      ? null
-                      : () {
-                          setState(() => _pencilMode = !_pencilMode);
-                        },
-                  icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 14),
+                  onPressed:
+                      _solved || _paused
+                          ? null
+                          : () {
+                            setState(() => _pencilMode = !_pencilMode);
+                          },
+                  icon: Icon(
+                    _pencilMode ? Icons.edit_note : Icons.edit_outlined,
+                    size: 14,
+                  ),
                   label: const Text('Pencil'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-                    backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    backgroundColor:
+                        _pencilMode ? const Color(0xFF3659B5) : null,
                     foregroundColor: _pencilMode ? Colors.white : null,
                   ),
                 ),
@@ -422,8 +495,14 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                   icon: const Icon(Icons.lightbulb, size: 14),
                   label: Text('Hint $_hintsUsed'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -434,20 +513,33 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                   icon: const Icon(Icons.backspace_outlined, size: 14),
                   label: const Text('Clear'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 4),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
+                  onPressed:
+                      _paused || _solved || _history.isEmpty ? null : _undo,
                   icon: const Icon(Icons.undo, size: 14),
                   label: const Text('Undo'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -461,28 +553,48 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                 Expanded(
                   child: FilledButton.tonalIcon(
                     onPressed: _paused ? _resumeGame : _pauseGame,
-                    icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 16),
+                    icon: Icon(
+                      _paused ? Icons.play_arrow : Icons.pause,
+                      size: 16,
+                    ),
                     label: Text(_paused ? 'Resume' : 'Pause'),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 10,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: FilledButton.tonalIcon(
-                    onPressed: _solved || _paused
-                        ? null
-                        : () {
-                            setState(() => _pencilMode = !_pencilMode);
-                          },
-                    icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 16),
+                    onPressed:
+                        _solved || _paused
+                            ? null
+                            : () {
+                              setState(() => _pencilMode = !_pencilMode);
+                            },
+                    icon: Icon(
+                      _pencilMode ? Icons.edit_note : Icons.edit_outlined,
+                      size: 16,
+                    ),
                     label: const Text('Pencil'),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                      backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 10,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      backgroundColor:
+                          _pencilMode ? const Color(0xFF3659B5) : null,
                       foregroundColor: _pencilMode ? Colors.white : null,
                     ),
                   ),
@@ -494,8 +606,14 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                     icon: const Icon(Icons.lightbulb, size: 16),
                     label: Text('Hint $_hintsUsed'),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 10,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -510,20 +628,33 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
                     icon: const Icon(Icons.backspace_outlined, size: 16),
                     label: const Text('Clear'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 10,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
+                    onPressed:
+                        _paused || _solved || _history.isEmpty ? null : _undo,
                     icon: const Icon(Icons.undo, size: 16),
                     label: const Text('Undo'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 10,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -537,9 +668,10 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
 
   void _setupGame(Puzzle puzzle) {
     _puzzle = puzzle;
-    _initialGrid = (puzzle.payload['grid'] as List)
-        .map((row) => List<int>.from(row as List))
-        .toList();
+    _initialGrid =
+        (puzzle.payload['grid'] as List)
+            .map((row) => List<int>.from(row as List))
+            .toList();
     _board = _copyGrid(_initialGrid);
     _solution = _solveSudoku(_copyGrid(_initialGrid));
 
@@ -651,7 +783,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     final last = _history.removeLast();
     setState(() {
       _board = _copyGrid(last.board);
-      _pencilMarks = last.pencilMarks.map((k, v) => MapEntry(k, Set<int>.from(v)));
+      _pencilMarks = last.pencilMarks.map(
+        (k, v) => MapEntry(k, Set<int>.from(v)),
+      );
       _hintsUsed = last.hintsUsed;
     });
     unawaited(_persistSession());
@@ -663,7 +797,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     int? targetRow = _selectedRow;
     int? targetCol = _selectedCol;
 
-    if (targetRow == null || targetCol == null || _board[targetRow][targetCol] != 0) {
+    if (targetRow == null ||
+        targetCol == null ||
+        _board[targetRow][targetCol] != 0) {
       final firstEmpty = _findFirstEmpty();
       if (firstEmpty == null) {
         return;
@@ -676,7 +812,11 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
 
     _board[targetRow][targetCol] = _solution[targetRow][targetCol];
     _pencilMarks.remove(_cellKey(targetRow, targetCol));
-    _removeValueFromPeers(targetRow, targetCol, _solution[targetRow][targetCol]);
+    _removeValueFromPeers(
+      targetRow,
+      targetCol,
+      _solution[targetRow][targetCol],
+    );
     _hintsUsed++;
     setState(() {});
     unawaited(_persistSession());
@@ -720,16 +860,24 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
 
     _timer?.cancel();
     _solved = true;
-    unawaited(ref.read(puzzleSessionServiceProvider).clearSudokuSession(puzzleId: _puzzle.id));
+    unawaited(
+      ref
+          .read(puzzleSessionServiceProvider)
+          .clearSudokuSession(puzzleId: _puzzle.id),
+    );
     _playCelebration();
     _syncCompletion();
   }
 
   Future<void> _restoreSessionAndStartTimer() async {
-    final session = await ref.read(puzzleSessionServiceProvider).loadSudokuSession(puzzleId: _puzzle.id);
+    final session = await ref
+        .read(puzzleSessionServiceProvider)
+        .loadSudokuSession(puzzleId: _puzzle.id);
     if (session != null && _isValidSessionBoard(session.board)) {
       _board = _copyGrid(session.board);
-      _pencilMarks = session.pencilMarks.map((k, v) => MapEntry(k, Set<int>.from(v)));
+      _pencilMarks = session.pencilMarks.map(
+        (k, v) => MapEntry(k, Set<int>.from(v)),
+      );
       _hintsUsed = session.hintsUsed;
       _elapsedSeconds = session.elapsedSeconds;
     }
@@ -743,22 +891,23 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
   Future<void> _confirmResetBoard() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset board?'),
-        content: const Text(
-          'This will clear all your current entries for this puzzle. The timer will keep running.',
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Reset board?'),
+            content: const Text(
+              'This will clear all your current entries for this puzzle. The timer will keep running.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Reset'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed != true) {
@@ -782,11 +931,15 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     if (!_initialized || _solved) {
       return;
     }
-    await ref.read(puzzleSessionServiceProvider).saveSudokuSession(
+    await ref
+        .read(puzzleSessionServiceProvider)
+        .saveSudokuSession(
           SudokuSessionState(
             puzzleId: _puzzle.id,
             board: _copyGrid(_board),
-            pencilMarks: _pencilMarks.map((k, v) => MapEntry(k, Set<int>.from(v))),
+            pencilMarks: _pencilMarks.map(
+              (k, v) => MapEntry(k, Set<int>.from(v)),
+            ),
             hintsUsed: _hintsUsed,
             elapsedSeconds: _elapsedSeconds,
             updatedAt: DateTime.now().toUtc(),
@@ -797,7 +950,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
   Future<void> _syncCompletion() async {
     await _markLocalCompleted();
     try {
-      await ref.read(progressSyncServiceProvider).syncProgress(
+      await ref
+          .read(progressSyncServiceProvider)
+          .syncProgress(
             UserProgress(
               puzzleId: _puzzle.id,
               type: PuzzleType.sudoku,
@@ -809,7 +964,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
           );
     } on ProgressSyncException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
 
@@ -820,27 +977,37 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     final action = await showDialog<_CompletionAction>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Puzzle solved'),
-        content: Text(
-          'Time: ${_formatTime(_elapsedSeconds)}\nHints used: $_hintsUsed',
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(_CompletionAction.modeSelection),
-            child: const Text('Mode Selection'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(_CompletionAction.puzzleSelection),
-            child: const Text('Puzzle Selection'),
-          ),
-          if (_hasNextPuzzle)
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(_CompletionAction.nextPuzzle),
-              child: const Text('Next Puzzle'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Puzzle solved'),
+            content: Text(
+              'Time: ${_formatTime(_elapsedSeconds)}\nHints used: $_hintsUsed',
             ),
-        ],
-      ),
+            actions: <Widget>[
+              TextButton(
+                onPressed:
+                    () => Navigator.of(
+                      context,
+                    ).pop(_CompletionAction.modeSelection),
+                child: const Text('Mode Selection'),
+              ),
+              TextButton(
+                onPressed:
+                    () => Navigator.of(
+                      context,
+                    ).pop(_CompletionAction.puzzleSelection),
+                child: const Text('Puzzle Selection'),
+              ),
+              if (_hasNextPuzzle)
+                FilledButton(
+                  onPressed:
+                      () => Navigator.of(
+                        context,
+                      ).pop(_CompletionAction.nextPuzzle),
+                  child: const Text('Next Puzzle'),
+                ),
+            ],
+          ),
     );
 
     if (!mounted || action == null) {
@@ -860,11 +1027,12 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
         final next = widget.puzzleSequence[nextIndex];
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => SudokuPage(
-              puzzle: next,
-              puzzleSequence: widget.puzzleSequence,
-              puzzleIndex: nextIndex,
-            ),
+            builder:
+                (_) => SudokuPage(
+                  puzzle: next,
+                  puzzleSequence: widget.puzzleSequence,
+                  puzzleIndex: nextIndex,
+                ),
           ),
         );
     }
@@ -1052,12 +1220,18 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
     return conflicts;
   }
 
-  bool get _hasNextPuzzle => widget.puzzleIndex < widget.puzzleSequence.length - 1;
+  bool get _hasNextPuzzle =>
+      widget.puzzleIndex < widget.puzzleSequence.length - 1;
 
   Future<void> _markLocalCompleted() async {
-    final userId = ref.read(authServiceProvider).currentUser?.id ?? 'guest-local';
+    final userId =
+        ref.read(authServiceProvider).currentUser?.id ?? 'guest-local';
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('puzzle_completed_${userId}_${_puzzle.id}', true);
+    await prefs.setString(
+      'puzzle_completed_${userId}_${_puzzle.id}_at',
+      DateTime.now().toUtc().toIso8601String(),
+    );
   }
 
   void _playCelebration() {
@@ -1072,14 +1246,14 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
   }
 }
 
-enum _CompletionAction {
-  modeSelection,
-  puzzleSelection,
-  nextPuzzle,
-}
+enum _CompletionAction { modeSelection, puzzleSelection, nextPuzzle }
 
 class _SudokuSnapshot {
-  const _SudokuSnapshot({required this.board, required this.pencilMarks, required this.hintsUsed});
+  const _SudokuSnapshot({
+    required this.board,
+    required this.pencilMarks,
+    required this.hintsUsed,
+  });
 
   final List<List<int>> board;
   final Map<String, Set<int>> pencilMarks;
