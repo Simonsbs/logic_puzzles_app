@@ -79,9 +79,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
                 const bottomPadding = 8.0;
                 const gap = 6.0;
                 const topBarHeight = 34.0;
-                const actionHeight = 46.0;
-                const targetNumberPadHeight = 140.0;
-                const minNumberPadHeight = 92.0;
+                const actionHeight = 106.0;
+                const targetNumberPadHeight = 110.0;
+                const minNumberPadHeight = 72.0;
                 const minBoardSize = 150.0;
 
                 final availableHeight = constraints.maxHeight - topPadding - bottomPadding;
@@ -347,74 +347,158 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
   }
 
   Widget _actionRow() {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: _paused ? _resumeGame : _pauseGame,
-            icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 14),
-            label: Text(_paused ? 'Resume' : 'Pause'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tight = constraints.maxHeight < 102;
+        if (tight) {
+          return Row(
+            children: <Widget>[
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _paused ? _resumeGame : _pauseGame,
+                  icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 14),
+                  label: Text(_paused ? 'Resume' : 'Pause'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _solved || _paused
+                      ? null
+                      : () {
+                          setState(() => _pencilMode = !_pencilMode);
+                        },
+                  icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 14),
+                  label: const Text('Pencil'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                    backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+                    foregroundColor: _pencilMode ? Colors.white : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _solved || _paused ? null : _useHint,
+                  icon: const Icon(Icons.lightbulb, size: 14),
+                  label: Text('Hint $_hintsUsed'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _paused || _solved ? null : _clearSelected,
+                  icon: const Icon(Icons.backspace_outlined, size: 14),
+                  label: const Text('Clear'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
+                  icon: const Icon(Icons.undo, size: 14),
+                  label: const Text('Undo'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _paused ? _resumeGame : _pauseGame,
+                    icon: Icon(_paused ? Icons.play_arrow : Icons.pause, size: 16),
+                    label: Text(_paused ? 'Resume' : 'Pause'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _solved || _paused
+                        ? null
+                        : () {
+                            setState(() => _pencilMode = !_pencilMode);
+                          },
+                    icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 16),
+                    label: const Text('Pencil'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+                      foregroundColor: _pencilMode ? Colors.white : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _solved || _paused ? null : _useHint,
+                    icon: const Icon(Icons.lightbulb, size: 16),
+                    label: Text('Hint $_hintsUsed'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: _solved || _paused
-                ? null
-                : () {
-                    setState(() => _pencilMode = !_pencilMode);
-                  },
-            icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 14),
-            label: const Text('Pencil'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-              backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
-              foregroundColor: _pencilMode ? Colors.white : null,
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _paused || _solved ? null : _clearSelected,
+                    icon: const Icon(Icons.backspace_outlined, size: 16),
+                    label: const Text('Clear'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
+                    icon: const Icon(Icons.undo, size: 16),
+                    label: const Text('Undo'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: _solved || _paused ? null : _useHint,
-            icon: const Icon(Icons.lightbulb, size: 14),
-            label: Text('Hint $_hintsUsed'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _paused || _solved ? null : _clearSelected,
-            icon: const Icon(Icons.backspace_outlined, size: 14),
-            label: const Text('Clear'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _paused || _solved || _history.isEmpty ? null : _undo,
-            icon: const Icon(Icons.undo, size: 14),
-            label: const Text('Undo'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-              textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
