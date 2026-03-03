@@ -48,10 +48,20 @@ Deno.serve(async (req) => {
 });
 
 async function summary(admin: ReturnType<typeof createClient>): Promise<Response> {
-  const [{ data: puzzles }, { data: progress }, { data: events }] = await Promise.all([
+  const [
+    { data: puzzles },
+    { data: progress },
+    { data: events },
+    { data: sudokuLeaderboard },
+    { data: queensLeaderboard },
+    { data: streakLeaderboard },
+  ] = await Promise.all([
     admin.from('puzzles').select('id,type,difficulty,is_daily,published_at').order('published_at', { ascending: false }).limit(5000),
     admin.from('user_progress').select('completed,session_elapsed_seconds,type,user_id'),
     admin.from('score_submission_events').select('id,type,accepted,created_at').order('created_at', { ascending: false }).limit(5000),
+    admin.from('leaderboard_type').select('rank,user_name,score,label').eq('type', 'sudoku').order('rank', { ascending: true }).limit(20),
+    admin.from('leaderboard_type').select('rank,user_name,score,label').eq('type', 'queens').order('rank', { ascending: true }).limit(20),
+    admin.from('leaderboard_streak').select('rank,user_name,score,label').order('rank', { ascending: true }).limit(20),
   ]);
 
   const puzzleRows = Array.isArray(puzzles) ? puzzles : [];
@@ -120,6 +130,11 @@ async function summary(admin: ReturnType<typeof createClient>): Promise<Response
       accepted_submissions_24h: accepted24h,
       accepted_submissions_7d: accepted7d,
       submissions_by_type: submissionsByType,
+    },
+    leaderboards: {
+      sudoku: normalizeLeaderboard(sudokuLeaderboard),
+      queens: normalizeLeaderboard(queensLeaderboard),
+      streaks: normalizeLeaderboard(streakLeaderboard),
     },
   });
 }
@@ -202,4 +217,30 @@ function json(status: number, payload: Record<string, unknown>): Response {
       'Content-Type': 'application/json',
     },
   });
+}
+
+function normalizeLeaderboard(rows: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  return rows.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      rank: toInt(r.rank),
+      user_name: String(r.user_name ?? 'Player'),
+      score: toInt(r.score),
+      label: String(r.label ?? 'pts'),
+    };
+  });
+}
+
+function toInt(value: unknown): number {
+  if (typeof value === 'number') {
+    return Math.trunc(value);
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
 }

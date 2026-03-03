@@ -57,12 +57,31 @@ class SupabaseLeaderboardService implements LeaderboardService {
     return rows
         .map(
           (row) => LeaderboardEntry(
-            rank: row['rank'] as int,
-            userName: row['user_name'] as String,
-            score: row['score'] as int,
-            label: row['label'] as String? ?? 'pts',
+            rank: _toInt(row['rank']),
+            userName:
+                (row['user_name'] as String?)?.trim().isNotEmpty == true
+                    ? row['user_name'] as String
+                    : 'Player',
+            score: _toInt(row['score']),
+            label:
+                (row['label'] as String?)?.trim().isNotEmpty == true
+                    ? row['label'] as String
+                    : 'pts',
           ),
         )
         .toList();
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 }

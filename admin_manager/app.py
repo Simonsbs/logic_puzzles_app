@@ -56,10 +56,18 @@ app.secret_key = os.environ.get('ADMIN_MANAGER_FLASK_SECRET', 'change-me')
 
 @app.get('/')
 def dashboard() -> str:
-    usage = client.call('summary').get('usage', {})
+    summary = client.call('summary')
+    usage = summary.get('usage', {})
+    leaderboards = summary.get('leaderboards', {})
     puzzle_type = request.args.get('type', 'sudoku').strip().lower()
     puzzles = client.call('list_puzzles', type=puzzle_type).get('puzzles', [])
-    return render_template('dashboard.html', usage=usage, puzzles=puzzles, selected_type=puzzle_type)
+    return render_template(
+        'dashboard.html',
+        usage=usage,
+        leaderboards=leaderboards,
+        puzzles=puzzles,
+        selected_type=puzzle_type,
+    )
 
 
 @app.post('/puzzles/save')

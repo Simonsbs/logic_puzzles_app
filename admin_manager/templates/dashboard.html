@@ -68,6 +68,66 @@
       </div>
     </div>
 
+    <div class="grid" style="margin-top:12px;">
+      <div class="card">
+        <h3 style="margin:0 0 10px;">Sudoku Leaderboard</h3>
+        <table>
+          <thead><tr><th>#</th><th>User</th><th>Score</th><th>Label</th></tr></thead>
+          <tbody>
+            {% for row in (leaderboards.sudoku or []) %}
+              <tr>
+                <td>{{ row.rank }}</td>
+                <td>{{ row.user_name }}</td>
+                <td>{{ row.score }}</td>
+                <td>{{ row.label }}</td>
+              </tr>
+            {% endfor %}
+            {% if not (leaderboards.sudoku or []) %}
+              <tr><td colspan="4"><span class="k">No entries yet</span></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 10px;">Queens Leaderboard</h3>
+        <table>
+          <thead><tr><th>#</th><th>User</th><th>Score</th><th>Label</th></tr></thead>
+          <tbody>
+            {% for row in (leaderboards.queens or []) %}
+              <tr>
+                <td>{{ row.rank }}</td>
+                <td>{{ row.user_name }}</td>
+                <td>{{ row.score }}</td>
+                <td>{{ row.label }}</td>
+              </tr>
+            {% endfor %}
+            {% if not (leaderboards.queens or []) %}
+              <tr><td colspan="4"><span class="k">No entries yet</span></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 10px;">Streak Leaderboard</h3>
+        <table>
+          <thead><tr><th>#</th><th>User</th><th>Score</th><th>Label</th></tr></thead>
+          <tbody>
+            {% for row in (leaderboards.streaks or []) %}
+              <tr>
+                <td>{{ row.rank }}</td>
+                <td>{{ row.user_name }}</td>
+                <td>{{ row.score }}</td>
+                <td>{{ row.label }}</td>
+              </tr>
+            {% endfor %}
+            {% if not (leaderboards.streaks or []) %}
+              <tr><td colspan="4"><span class="k">No entries yet</span></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card" style="margin-top:12px;">
       <div class="tabs row">
         <a class="{% if selected_type == 'sudoku' %}active{% endif %}" href="/?type=sudoku">Sudoku</a>
