@@ -42,6 +42,7 @@ Applied by CLI:
   - rate limit (per user / 5-minute window)
   - daily attempt cap per puzzle
   - unrealistic-time and streak-jump validation
+  - hint usage tracked and applied to puzzle leaderboard score (`+20s` per hint)
 
 Still required in Supabase dashboard:
 1. In Auth providers, enable Google OAuth and configure Google client ID/secret.

@@ -18,6 +18,7 @@ create table if not exists user_progress (
   type text not null,
   completed boolean not null default false,
   best_seconds integer not null default 0,
+  hints_used integer not null default 0,
   streak_days integer not null default 0,
   updated_at timestamptz not null default now(),
   primary key (user_id, puzzle_id)
@@ -38,6 +39,7 @@ create table if not exists score_submission_events (
   type text,
   completed boolean not null default false,
   best_seconds integer not null default 0,
+  hints_used integer not null default 0,
   streak_days integer not null default 0,
   accepted boolean not null,
   reason_code text not null,
@@ -86,11 +88,11 @@ group by type, user_id;
 
 create or replace view leaderboard_puzzle as
 select
-  row_number() over (partition by puzzle_id order by min(best_seconds) asc) as rank,
+  row_number() over (partition by puzzle_id order by min(best_seconds + (hints_used * 20)) asc) as rank,
   puzzle_id,
   coalesce(max(u.raw_user_meta_data->>'full_name'), 'Player') as user_name,
-  min(best_seconds)::int as score,
-  'seconds'::text as label
+  min(best_seconds + (hints_used * 20))::int as score,
+  'adjusted seconds'::text as label
 from user_progress up
 join auth.users u on u.id = up.user_id
 where up.completed = true

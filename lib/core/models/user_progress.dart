@@ -7,6 +7,7 @@ class UserProgress {
     required this.completed,
     required this.bestSeconds,
     required this.streakDays,
+    this.hintsUsed = 0,
   });
 
   final String puzzleId;
@@ -14,4 +15,5 @@ class UserProgress {
   final bool completed;
   final int bestSeconds;
   final int streakDays;
+  final int hintsUsed;
 }

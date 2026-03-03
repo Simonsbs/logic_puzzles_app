@@ -24,6 +24,7 @@ class SupabaseProgressSyncService implements ProgressSyncService {
           'completed': progress.completed,
           'best_seconds': progress.bestSeconds,
           'streak_days': progress.streakDays,
+          'hints_used': progress.hintsUsed,
         },
       );
     } on FunctionException catch (_) {

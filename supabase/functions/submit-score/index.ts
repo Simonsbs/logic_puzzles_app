@@ -13,6 +13,7 @@ const minReasonableSeconds: Record<string, number> = {
 const maxSubmissionsPerFiveMinutes = 30;
 const maxDailyAttemptsPerPuzzle = 80;
 const maxBestSeconds = 24 * 60 * 60;
+const hintPenaltySeconds = 20;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -57,6 +58,7 @@ Deno.serve(async (req) => {
     const completed = Boolean(body.completed ?? false);
     const bestSeconds = Number(body.best_seconds ?? 0);
     const streakDays = Number(body.streak_days ?? 0);
+    const hintsUsed = Number(body.hints_used ?? 0);
 
     const reject = async (status: number, reasonCode: string, error: string): Promise<Response> => {
       await logSubmissionEvent(adminClient, {
@@ -66,6 +68,7 @@ Deno.serve(async (req) => {
         completed,
         bestSeconds,
         streakDays,
+        hintsUsed,
         accepted: false,
         reasonCode,
       });
@@ -76,11 +79,11 @@ Deno.serve(async (req) => {
       return await reject(400, 'missing_fields', 'Missing puzzle_id or type');
     }
 
-    if (!Number.isInteger(bestSeconds) || !Number.isInteger(streakDays)) {
-      return await reject(400, 'invalid_integer_fields', 'best_seconds and streak_days must be integers');
+    if (!Number.isInteger(bestSeconds) || !Number.isInteger(streakDays) || !Number.isInteger(hintsUsed)) {
+      return await reject(400, 'invalid_integer_fields', 'best_seconds, streak_days and hints_used must be integers');
     }
 
-    if (bestSeconds < 0 || bestSeconds > maxBestSeconds || streakDays < 0 || streakDays > 36500) {
+    if (bestSeconds < 0 || bestSeconds > maxBestSeconds || streakDays < 0 || streakDays > 36500 || hintsUsed < 0 || hintsUsed > 10000) {
       return await reject(400, 'invalid_ranges', 'Invalid range for score payload');
     }
 
@@ -137,7 +140,7 @@ Deno.serve(async (req) => {
 
     const { data: existingRow } = await adminClient
       .from('user_progress')
-      .select('completed, best_seconds, streak_days')
+      .select('completed, best_seconds, streak_days, hints_used')
       .eq('user_id', user.id)
       .eq('puzzle_id', puzzleId)
       .maybeSingle();
@@ -148,9 +151,18 @@ Deno.serve(async (req) => {
     }
 
     const mergedCompleted = completed || Boolean(existingRow?.completed);
-    const mergedBestSeconds = mergedCompleted
-      ? pickBestSeconds(existingRow?.best_seconds, bestSeconds)
-      : 0;
+
+    const existingBestSeconds = Number(existingRow?.best_seconds ?? 0);
+    const existingHintsUsed = Number(existingRow?.hints_used ?? 0);
+
+    const mergedBest = pickBestResult(
+      existingBestSeconds,
+      existingHintsUsed,
+      bestSeconds,
+      hintsUsed,
+      mergedCompleted,
+    );
+
     const mergedStreakDays = Math.max(existingStreak, streakDays);
 
     const { error: upsertError } = await adminClient.from('user_progress').upsert(
@@ -159,7 +171,8 @@ Deno.serve(async (req) => {
         puzzle_id: puzzleId,
         type,
         completed: mergedCompleted,
-        best_seconds: mergedBestSeconds,
+        best_seconds: mergedBest.bestSeconds,
+        hints_used: mergedBest.hintsUsed,
         streak_days: mergedStreakDays,
       },
       { onConflict: 'user_id,puzzle_id' },
@@ -176,6 +189,7 @@ Deno.serve(async (req) => {
       completed,
       bestSeconds,
       streakDays,
+      hintsUsed,
       accepted: true,
       reasonCode: 'accepted',
     });
@@ -185,7 +199,8 @@ Deno.serve(async (req) => {
       progress: {
         puzzle_id: puzzleId,
         completed: mergedCompleted,
-        best_seconds: mergedBestSeconds,
+        best_seconds: mergedBest.bestSeconds,
+        hints_used: mergedBest.hintsUsed,
         streak_days: mergedStreakDays,
       },
     });
@@ -204,8 +219,14 @@ type SubmissionLog = {
   completed: boolean;
   bestSeconds: number;
   streakDays: number;
+  hintsUsed: number;
   accepted: boolean;
   reasonCode: string;
+};
+
+type BestResult = {
+  bestSeconds: number;
+  hintsUsed: number;
 };
 
 async function logSubmissionEvent(
@@ -219,20 +240,52 @@ async function logSubmissionEvent(
     completed: payload.completed,
     best_seconds: payload.bestSeconds,
     streak_days: payload.streakDays,
+    hints_used: payload.hintsUsed,
     accepted: payload.accepted,
     reason_code: payload.reasonCode,
   });
 }
 
-function pickBestSeconds(existing: unknown, submitted: number): number {
-  const existingValue = Number(existing ?? 0);
-  if (!Number.isInteger(submitted) || submitted <= 0) {
-    return Number.isInteger(existingValue) && existingValue > 0 ? existingValue : 0;
+function pickBestResult(
+  existingSeconds: number,
+  existingHints: number,
+  submittedSeconds: number,
+  submittedHints: number,
+  completed: boolean,
+): BestResult {
+  if (!completed) {
+    return {
+      bestSeconds: Number.isInteger(existingSeconds) && existingSeconds > 0 ? existingSeconds : 0,
+      hintsUsed: Number.isInteger(existingHints) && existingHints >= 0 ? existingHints : 0,
+    };
   }
-  if (!Number.isInteger(existingValue) || existingValue <= 0) {
-    return submitted;
+
+  if (!Number.isInteger(submittedSeconds) || submittedSeconds <= 0) {
+    return {
+      bestSeconds: Number.isInteger(existingSeconds) && existingSeconds > 0 ? existingSeconds : 0,
+      hintsUsed: Number.isInteger(existingHints) && existingHints >= 0 ? existingHints : 0,
+    };
   }
-  return Math.min(existingValue, submitted);
+
+  const normalizedExistingSeconds = Number.isInteger(existingSeconds) && existingSeconds > 0 ? existingSeconds : 0;
+  const normalizedExistingHints = Number.isInteger(existingHints) && existingHints >= 0 ? existingHints : 0;
+
+  if (normalizedExistingSeconds == 0) {
+    return { bestSeconds: submittedSeconds, hintsUsed: Math.max(0, submittedHints) };
+  }
+
+  const existingEffective = effectiveScore(normalizedExistingSeconds, normalizedExistingHints);
+  const submittedEffective = effectiveScore(submittedSeconds, Math.max(0, submittedHints));
+
+  if (submittedEffective < existingEffective) {
+    return { bestSeconds: submittedSeconds, hintsUsed: Math.max(0, submittedHints) };
+  }
+
+  return { bestSeconds: normalizedExistingSeconds, hintsUsed: normalizedExistingHints };
+}
+
+function effectiveScore(seconds: number, hints: number): number {
+  return seconds + hints * hintPenaltySeconds;
 }
 
 function json(status: number, payload: Record<string, unknown>): Response {
