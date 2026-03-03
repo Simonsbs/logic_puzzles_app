@@ -10,6 +10,7 @@ import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/models/user_progress.dart';
 import 'package:logic_puzzles_app/core/services/progress_sync_service.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SudokuPage extends ConsumerStatefulWidget {
   const SudokuPage({
@@ -794,6 +795,7 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
   }
 
   Future<void> _syncCompletion() async {
+    await _markLocalCompleted();
     try {
       await ref.read(progressSyncServiceProvider).syncProgress(
             UserProgress(
@@ -1051,6 +1053,12 @@ class _SudokuPageState extends ConsumerState<SudokuPage>
   }
 
   bool get _hasNextPuzzle => widget.puzzleIndex < widget.puzzleSequence.length - 1;
+
+  Future<void> _markLocalCompleted() async {
+    final userId = ref.read(authServiceProvider).currentUser?.id ?? 'guest-local';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('puzzle_completed_${userId}_${_puzzle.id}', true);
+  }
 
   void _playCelebration() {
     SystemSound.play(SystemSoundType.alert);

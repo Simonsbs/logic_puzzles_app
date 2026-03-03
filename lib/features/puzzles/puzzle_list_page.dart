@@ -6,18 +6,32 @@ import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/features/queens/queens_page.dart';
 import 'package:logic_puzzles_app/features/sudoku/sudoku_page.dart';
 import 'package:logic_puzzles_app/state/app_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class PuzzleListPage extends ConsumerWidget {
+class PuzzleListPage extends ConsumerStatefulWidget {
   const PuzzleListPage({super.key, required this.type});
 
   final PuzzleType type;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PuzzleListPage> createState() => _PuzzleListPageState();
+}
+
+class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
+  late Future<(List<Puzzle>, Map<String, PuzzleProgressStatus>)> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${type.displayName} Puzzles')),
+      appBar: AppBar(title: Text('${widget.type.displayName} Puzzles')),
       body: FutureBuilder<(List<Puzzle>, Map<String, PuzzleProgressStatus>)>(
-        future: _load(ref),
+        future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -39,7 +53,7 @@ class PuzzleListPage extends ConsumerWidget {
               return _PuzzleTile(
                 puzzle: puzzle,
                 status: status,
-                onTap: () => _openPuzzle(context, puzzles, index, status),
+                onTap: () => _openPuzzle(puzzles, index, status),
               );
             },
           );
@@ -48,14 +62,41 @@ class PuzzleListPage extends ConsumerWidget {
     );
   }
 
-  Future<(List<Puzzle>, Map<String, PuzzleProgressStatus>)> _load(WidgetRef ref) async {
-    final puzzles = await ref.read(puzzleRepositoryProvider).getPuzzles(type);
-    final progress = await ref.read(puzzleProgressServiceProvider).progressByType(type);
-    return (puzzles, progress);
+  Future<(List<Puzzle>, Map<String, PuzzleProgressStatus>)> _load() async {
+    final puzzles = await ref.read(puzzleRepositoryProvider).getPuzzles(widget.type);
+    final remote = await ref.read(puzzleProgressServiceProvider).progressByType(widget.type);
+    final merged = Map<String, PuzzleProgressStatus>.from(remote);
+
+    final auth = ref.read(authServiceProvider);
+    final userId = auth.currentUser?.id ?? 'guest-local';
+    final prefs = await SharedPreferences.getInstance();
+
+    for (final puzzle in puzzles) {
+      final localCompleted = prefs.getBool('puzzle_completed_${userId}_${puzzle.id}') ?? false;
+      final remoteStatus = merged[puzzle.id];
+
+      var localInProgress = false;
+      if (puzzle.type == PuzzleType.sudoku) {
+        final session = await ref.read(puzzleSessionServiceProvider).loadSudokuSession(puzzleId: puzzle.id);
+        localInProgress = session != null && session.elapsedSeconds > 0;
+      }
+
+      final completed = (remoteStatus?.completed ?? false) || localCompleted;
+      final inProgress = !completed && ((remoteStatus?.inProgress ?? false) || localInProgress);
+      final bestSeconds = remoteStatus?.bestSeconds ?? 0;
+
+      merged[puzzle.id] = PuzzleProgressStatus(
+        completed: completed,
+        inProgress: inProgress,
+        bestSeconds: bestSeconds,
+        updatedAt: remoteStatus?.updatedAt,
+      );
+    }
+
+    return (puzzles, merged);
   }
 
-  void _openPuzzle(
-    BuildContext context,
+  Future<void> _openPuzzle(
     List<Puzzle> puzzles,
     int index,
     PuzzleProgressStatus? status,
@@ -78,18 +119,15 @@ class PuzzleListPage extends ConsumerWidget {
           ],
         ),
       );
-      if (confirmed != true) {
+      if (confirmed != true || !mounted) {
         return;
       }
-    }
-    if (!context.mounted) {
-      return;
     }
 
     final puzzle = puzzles[index];
     switch (puzzle.type) {
       case PuzzleType.sudoku:
-        Navigator.of(context).push(
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => SudokuPage(
               puzzle: puzzle,
@@ -99,12 +137,21 @@ class PuzzleListPage extends ConsumerWidget {
           ),
         );
       case PuzzleType.queens:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => QueensPage(puzzle: puzzle)));
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => QueensPage(puzzle: puzzle)),
+        );
       case PuzzleType.kakuro:
       case PuzzleType.nonogram:
       case PuzzleType.minesweeper:
         break;
     }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _future = _load();
+    });
   }
 }
 
