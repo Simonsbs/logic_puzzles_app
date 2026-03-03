@@ -160,7 +160,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ref.invalidate(modeStreakProvider(type));
       }
 
-      final syncedCompletions = await _syncLocalCompletions(allPuzzles);
+      final result = await _syncLocalCompletions(allPuzzles);
 
       ref.invalidate(showcasePuzzlesProvider);
       ref.invalidate(sudokuTypeLeaderboardProvider);
@@ -169,15 +169,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            syncedCompletions > 0
-                ? 'Data sync complete • uploaded $syncedCompletions completions'
-                : 'Data sync complete',
-          ),
-        ),
-      );
+      final reasonSummary = result.failures.entries
+          .map((e) => '${e.key}:${e.value}')
+          .join(', ');
+      final message =
+          'Data sync complete • detected ${result.detected}, tried ${result.attempted}, uploaded ${result.synced}'
+          '${reasonSummary.isNotEmpty ? ' • failed [$reasonSummary]' : ''}';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (error) {
       if (!mounted) {
         return;
@@ -192,7 +192,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  Future<int> _syncLocalCompletions(Map<String, PuzzleType> puzzleTypes) async {
+  Future<_BackfillResult> _syncLocalCompletions(
+    Map<String, PuzzleType> puzzleTypes,
+  ) async {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
       if (mounted) {
@@ -202,7 +204,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         );
       }
-      return 0;
+      return const _BackfillResult(detected: 0, attempted: 0, synced: 0);
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -224,7 +226,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       candidatePuzzleIds.add(key.substring(prefixIndex + 1));
     }
 
+    var attempted = 0;
     var synced = 0;
+    final failures = <String, int>{};
 
     for (final puzzleId in candidatePuzzleIds) {
       final type = puzzleTypes[puzzleId];
@@ -233,6 +237,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
 
       try {
+        attempted++;
         await ref
             .read(progressSyncServiceProvider)
             .syncProgress(
@@ -245,12 +250,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             );
         synced++;
-      } on ProgressSyncException {
-        // Continue with next item; user receives overall sync result.
+      } on ProgressSyncException catch (error) {
+        final reason = error.reasonCode ?? 'sync_error';
+        failures[reason] = (failures[reason] ?? 0) + 1;
       }
     }
 
-    return synced;
+    return _BackfillResult(
+      detected: candidatePuzzleIds.length,
+      attempted: attempted,
+      synced: synced,
+      failures: failures,
+    );
   }
 
   Future<void> _clearLocalProgress() async {
@@ -383,4 +394,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
     }
   }
+}
+
+class _BackfillResult {
+  const _BackfillResult({
+    required this.detected,
+    required this.attempted,
+    required this.synced,
+    this.failures = const <String, int>{},
+  });
+
+  final int detected;
+  final int attempted;
+  final int synced;
+  final Map<String, int> failures;
 }
