@@ -38,6 +38,10 @@ Applied by CLI:
 - schema + RLS + leaderboard views migrations
 - initial Sudoku/Queens seed rows
 - score submit function: `submit-score`
+- anti-cheat guardrails in function:
+  - rate limit (per user / 5-minute window)
+  - daily attempt cap per puzzle
+  - unrealistic-time and streak-jump validation
 
 Still required in Supabase dashboard:
 1. In Auth providers, enable Google OAuth and configure Google client ID/secret.

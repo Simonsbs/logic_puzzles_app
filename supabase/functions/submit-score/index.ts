@@ -10,6 +10,10 @@ const minReasonableSeconds: Record<string, number> = {
   queens: 30,
 };
 
+const maxSubmissionsPerFiveMinutes = 30;
+const maxDailyAttemptsPerPuzzle = 80;
+const maxBestSeconds = 24 * 60 * 60;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -54,21 +58,67 @@ Deno.serve(async (req) => {
     const bestSeconds = Number(body.best_seconds ?? 0);
     const streakDays = Number(body.streak_days ?? 0);
 
+    const reject = async (status: number, reasonCode: string, error: string): Promise<Response> => {
+      await logSubmissionEvent(adminClient, {
+        userId: user.id,
+        puzzleId,
+        type,
+        completed,
+        bestSeconds,
+        streakDays,
+        accepted: false,
+        reasonCode,
+      });
+      return json(status, { error, reason_code: reasonCode });
+    };
+
     if (!puzzleId || !type) {
-      return json(400, { error: 'Missing puzzle_id or type' });
+      return await reject(400, 'missing_fields', 'Missing puzzle_id or type');
     }
 
     if (!Number.isInteger(bestSeconds) || !Number.isInteger(streakDays)) {
-      return json(400, { error: 'best_seconds and streak_days must be integers' });
+      return await reject(400, 'invalid_integer_fields', 'best_seconds and streak_days must be integers');
     }
 
-    if (bestSeconds < 0 || streakDays < 0 || streakDays > 36500) {
-      return json(400, { error: 'Invalid range for score payload' });
+    if (bestSeconds < 0 || bestSeconds > maxBestSeconds || streakDays < 0 || streakDays > 36500) {
+      return await reject(400, 'invalid_ranges', 'Invalid range for score payload');
+    }
+
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { count: recentCount, error: recentCountError } = await adminClient
+      .from('score_submission_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', fiveMinutesAgo);
+
+    if (recentCountError) {
+      return json(500, { error: 'Failed to enforce rate limit' });
+    }
+
+    if ((recentCount ?? 0) >= maxSubmissionsPerFiveMinutes) {
+      return await reject(429, 'rate_limit', 'Too many submissions. Try again shortly.');
+    }
+
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const { count: dailyPuzzleCount, error: dailyCountError } = await adminClient
+      .from('score_submission_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('puzzle_id', puzzleId)
+      .gte('created_at', startOfDay.toISOString());
+
+    if (dailyCountError) {
+      return json(500, { error: 'Failed to enforce daily cap' });
+    }
+
+    if ((dailyPuzzleCount ?? 0) >= maxDailyAttemptsPerPuzzle) {
+      return await reject(429, 'daily_cap', 'Daily attempt cap reached for this puzzle');
     }
 
     const minSeconds = minReasonableSeconds[type];
     if (completed && minSeconds && bestSeconds > 0 && bestSeconds < minSeconds) {
-      return json(422, { error: 'Submitted completion time is not realistic' });
+      return await reject(422, 'too_fast', 'Submitted completion time is not realistic');
     }
 
     const { data: puzzleRow, error: puzzleError } = await adminClient
@@ -82,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     if (!puzzleRow || puzzleRow.type !== type) {
-      return json(400, { error: 'Puzzle does not match submitted type' });
+      return await reject(400, 'puzzle_type_mismatch', 'Puzzle does not match submitted type');
     }
 
     const { data: existingRow } = await adminClient
@@ -92,11 +142,16 @@ Deno.serve(async (req) => {
       .eq('puzzle_id', puzzleId)
       .maybeSingle();
 
+    const existingStreak = Number(existingRow?.streak_days ?? 0);
+    if (streakDays > existingStreak + 1) {
+      return await reject(422, 'streak_jump', 'Streak increase is too large for one submission');
+    }
+
     const mergedCompleted = completed || Boolean(existingRow?.completed);
     const mergedBestSeconds = mergedCompleted
       ? pickBestSeconds(existingRow?.best_seconds, bestSeconds)
       : 0;
-    const mergedStreakDays = Math.max(Number(existingRow?.streak_days ?? 0), streakDays);
+    const mergedStreakDays = Math.max(existingStreak, streakDays);
 
     const { error: upsertError } = await adminClient.from('user_progress').upsert(
       {
@@ -114,6 +169,17 @@ Deno.serve(async (req) => {
       return json(500, { error: 'Failed to persist score' });
     }
 
+    await logSubmissionEvent(adminClient, {
+      userId: user.id,
+      puzzleId,
+      type,
+      completed,
+      bestSeconds,
+      streakDays,
+      accepted: true,
+      reasonCode: 'accepted',
+    });
+
     return json(200, {
       ok: true,
       progress: {
@@ -130,6 +196,33 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+type SubmissionLog = {
+  userId: string;
+  puzzleId: string;
+  type: string;
+  completed: boolean;
+  bestSeconds: number;
+  streakDays: number;
+  accepted: boolean;
+  reasonCode: string;
+};
+
+async function logSubmissionEvent(
+  adminClient: ReturnType<typeof createClient>,
+  payload: SubmissionLog,
+): Promise<void> {
+  await adminClient.from('score_submission_events').insert({
+    user_id: payload.userId,
+    puzzle_id: payload.puzzleId,
+    type: payload.type,
+    completed: payload.completed,
+    best_seconds: payload.bestSeconds,
+    streak_days: payload.streakDays,
+    accepted: payload.accepted,
+    reason_code: payload.reasonCode,
+  });
+}
 
 function pickBestSeconds(existing: unknown, submitted: number): number {
   const existingValue = Number(existing ?? 0);

@@ -31,6 +31,25 @@ alter table user_progress
   add constraint user_progress_puzzle_fk
   foreign key (puzzle_id) references puzzles(id) on delete cascade;
 
+create table if not exists score_submission_events (
+  id bigserial primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  puzzle_id text,
+  type text,
+  completed boolean not null default false,
+  best_seconds integer not null default 0,
+  streak_days integer not null default 0,
+  accepted boolean not null,
+  reason_code text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists score_submission_events_user_time_idx
+  on score_submission_events (user_id, created_at desc);
+
+create index if not exists score_submission_events_user_puzzle_time_idx
+  on score_submission_events (user_id, puzzle_id, created_at desc);
+
 insert into puzzles (id, type, title, difficulty, payload, is_daily, published_at)
 values
   (
@@ -89,6 +108,7 @@ group by user_id;
 
 alter table puzzles enable row level security;
 alter table user_progress enable row level security;
+alter table score_submission_events enable row level security;
 
 drop policy if exists puzzles_read_all on puzzles;
 create policy puzzles_read_all
@@ -98,4 +118,9 @@ using (true);
 drop policy if exists progress_owner_read on user_progress;
 create policy progress_owner_read
 on user_progress for select
+using (auth.uid() = user_id);
+
+drop policy if exists score_events_owner_read on score_submission_events;
+create policy score_events_owner_read
+on score_submission_events for select
 using (auth.uid() = user_id);
