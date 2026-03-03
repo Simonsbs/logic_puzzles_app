@@ -76,8 +76,6 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
               children: <Widget>[
                 _compactTopBar(),
-                const SizedBox(height: 8),
-                _statusAndControls(),
                 const SizedBox(height: 10),
                 _boardCard(),
                 const SizedBox(height: 10),
@@ -108,25 +106,20 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
         ),
         const Spacer(),
         Text(
+          _formatTime(_elapsedSeconds),
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.3,
+            color: Color(0xFF1A2E26),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
           _puzzle.difficulty,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF3D5A4F)),
         ),
       ],
-    );
-  }
-
-  Widget _statusAndControls() {
-    return Center(
-      child: Text(
-        _formatTime(_elapsedSeconds),
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
-          color: Color(0xFF1A2E26),
-        ),
-      ),
     );
   }
 
