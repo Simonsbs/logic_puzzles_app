@@ -14,7 +14,7 @@ Free, no-ads, offline-first logic games app with Supabase backend support.
 - Login:
   - Google SSO via Supabase Auth OAuth
 - Sync:
-  - user progress synced to cloud
+  - user progress synced via validated Edge Function
 - Leaderboards:
   - per puzzle type
   - per individual puzzle
@@ -37,6 +37,7 @@ Applied by CLI:
 - project creation
 - schema + RLS + leaderboard views migrations
 - initial Sudoku/Queens seed rows
+- score submit function: `submit-score`
 
 Still required in Supabase dashboard:
 1. In Auth providers, enable Google OAuth and configure Google client ID/secret.
@@ -68,6 +69,6 @@ Or use the prepared local file and script:
 ## Next implementation steps
 
 1. Replace placeholder Sudoku/Queens screens with full interactive game engines.
-2. Add server-side validation function for score submissions.
+2. Expand anti-cheat validation rules (device attestation / anomaly scoring).
 3. Add migration/versioning workflow for schema updates.
 4. Add integration tests for auth + sync + leaderboard queries.

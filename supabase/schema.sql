@@ -99,14 +99,3 @@ drop policy if exists progress_owner_read on user_progress;
 create policy progress_owner_read
 on user_progress for select
 using (auth.uid() = user_id);
-
-drop policy if exists progress_owner_write on user_progress;
-create policy progress_owner_write
-on user_progress for insert
-with check (auth.uid() = user_id);
-
-drop policy if exists progress_owner_update on user_progress;
-create policy progress_owner_update
-on user_progress for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);

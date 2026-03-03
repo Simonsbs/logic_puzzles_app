@@ -14,16 +14,15 @@ class SupabaseProgressSyncService implements ProgressSyncService {
       return;
     }
 
-    await _client.from('user_progress').upsert(
-      <String, dynamic>{
-        'user_id': user.id,
+    await _client.functions.invoke(
+      'submit-score',
+      body: <String, dynamic>{
         'puzzle_id': progress.puzzleId,
         'type': progress.type.name,
         'completed': progress.completed,
         'best_seconds': progress.bestSeconds,
         'streak_days': progress.streakDays,
       },
-      onConflict: 'user_id,puzzle_id',
     );
   }
 }
