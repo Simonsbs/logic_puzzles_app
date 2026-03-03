@@ -292,15 +292,22 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       crossAxisSpacing: 8,
       children: List<Widget>.generate(9, (i) {
         final n = i + 1;
+        final disabledByUsage = _isValueExhausted(n);
         return FilledButton.tonal(
-          onPressed: _paused || _solved ? null : () => _applyNumber(n),
+          onPressed: _paused || _solved || disabledByUsage ? null : () => _applyNumber(n),
           style: FilledButton.styleFrom(
             padding: EdgeInsets.zero,
             textStyle: const TextStyle(fontSize: 22),
             backgroundColor: _pencilMode ? const Color(0xFFDCE6FF) : null,
             foregroundColor: _pencilMode ? const Color(0xFF234AA5) : null,
           ),
-          child: Text('$n', style: const TextStyle(fontWeight: FontWeight.w800)),
+          child: Text(
+            '$n',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: disabledByUsage ? const Color(0xFF8D9D95) : null,
+            ),
+          ),
         );
       }),
     );
@@ -430,6 +437,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     if (_selectedRow == null || _selectedCol == null) {
       return;
     }
+    if (_isValueExhausted(value)) {
+      return;
+    }
     final row = _selectedRow!;
     final col = _selectedCol!;
     if (_fixedCells.contains(_cellKey(row, col))) {
@@ -444,6 +454,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
       if (marks.contains(value)) {
         marks.remove(value);
       } else {
+        if (_isValuePresentInPeers(row, col, value)) {
+          return;
+        }
         marks.add(value);
       }
       _pencilMarks[key] = marks;
@@ -657,6 +670,40 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     }
 
     return true;
+  }
+
+  bool _isValuePresentInPeers(int row, int col, int value) {
+    for (var i = 0; i < 9; i++) {
+      if (i != col && _board[row][i] == value) {
+        return true;
+      }
+      if (i != row && _board[i][col] == value) {
+        return true;
+      }
+    }
+
+    final boxRow = (row ~/ 3) * 3;
+    final boxCol = (col ~/ 3) * 3;
+    for (var r = boxRow; r < boxRow + 3; r++) {
+      for (var c = boxCol; c < boxCol + 3; c++) {
+        if ((r != row || c != col) && _board[r][c] == value) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool _isValueExhausted(int value) {
+    var count = 0;
+    for (var row = 0; row < 9; row++) {
+      for (var col = 0; col < 9; col++) {
+        if (_board[row][col] == value) {
+          count++;
+        }
+      }
+    }
+    return count >= 9;
   }
 
   Set<String> _conflictingCells() {
