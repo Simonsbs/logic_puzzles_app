@@ -102,6 +102,29 @@ final authUserProvider = StreamProvider<AuthUser?>((ref) {
   return ref.watch(authServiceProvider).authStateChanges();
 });
 
+final dailyHomeMessageProvider = FutureProvider<String>((ref) async {
+  final config = ref.watch(appConfigProvider);
+  if (!config.supabaseEnabled) {
+    return _fallbackDailyMessage();
+  }
+
+  try {
+    final response = await Supabase.instance.client.functions.invoke(
+      'daily-content',
+    );
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final text = (data['text'] as String?)?.trim();
+      if (text != null && text.isNotEmpty) {
+        return text;
+      }
+    }
+  } catch (_) {
+    // Falls back to deterministic local message.
+  }
+  return _fallbackDailyMessage();
+});
+
 final showcasePuzzlesProvider = FutureProvider((ref) {
   return ref.watch(puzzleRepositoryProvider).getPuzzleTypesShowcase();
 });
@@ -250,4 +273,19 @@ bool _sameUtcDay(DateTime a, DateTime b) {
   final ua = a.toUtc();
   final ub = b.toUtc();
   return ua.year == ub.year && ua.month == ub.month && ua.day == ub.day;
+}
+
+String _fallbackDailyMessage() {
+  const messages = <String>[
+    'Fact: Sudoku has about 6.67 sextillion valid completed grids.',
+    'Joke: I solved 99 puzzles today. None of them were my life choices.',
+    'Fact: The name Sudoku comes from Japanese for “single number.”',
+    'Joke: I wanted an easy puzzle. The puzzle wanted character development.',
+    'Fact: Logic puzzles train pattern recognition and working memory.',
+    'Joke: I paused for a minute. My streak called it betrayal.',
+  ];
+  final today = DateTime.now().toUtc();
+  final index =
+      today.difference(DateTime.utc(2026, 1, 1)).inDays.abs() % messages.length;
+  return messages[index];
 }

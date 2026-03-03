@@ -15,7 +15,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authUserProvider).value;
-    final config = ref.watch(appConfigProvider);
+    final dailyMessage = ref.watch(dailyHomeMessageProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Puzzle Quest')),
@@ -34,8 +34,8 @@ class HomePage extends ConsumerWidget {
             children: <Widget>[
               _HeroPanel(
                 userName: user?.displayName,
-                modeLabel:
-                    config.supabaseEnabled ? 'Cloud Sync On' : 'Local Mode',
+                dailyMessage:
+                    dailyMessage.valueOrNull ?? 'Loading daily puzzle fact...',
               ),
               const SizedBox(height: 18),
               Text(
@@ -195,10 +195,10 @@ class _PuzzleTypeTile extends ConsumerWidget {
 }
 
 class _HeroPanel extends StatelessWidget {
-  const _HeroPanel({required this.userName, required this.modeLabel});
+  const _HeroPanel({required this.userName, required this.dailyMessage});
 
   final String? userName;
-  final String modeLabel;
+  final String dailyMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -232,25 +232,10 @@ class _HeroPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Sudoku and Queens are live now. More puzzle types are on the way.',
+            dailyMessage,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: const Color(0xFFE6FFF5)),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0x26FFFFFF),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              modeLabel,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
         ],
       ),
