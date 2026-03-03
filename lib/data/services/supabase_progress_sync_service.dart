@@ -10,7 +10,7 @@ class SupabaseProgressSyncService implements ProgressSyncService {
   @override
   Future<void> syncProgress(UserProgress progress) async {
     final user = _client.auth.currentUser;
-    final session = _client.auth.currentSession;
+    var session = _client.auth.currentSession;
     if (user == null || session == null) {
       throw const ProgressSyncException(
         'Please sign out and sign in again to refresh your session.',
@@ -18,10 +18,13 @@ class SupabaseProgressSyncService implements ProgressSyncService {
       );
     }
 
-    late final FunctionResponse response;
-    try {
-      response = await _client.functions.invoke(
+    Future<FunctionResponse> submit({String? accessToken}) {
+      return _client.functions.invoke(
         'submit-score',
+        headers:
+            accessToken == null
+                ? null
+                : <String, String>{'Authorization': 'Bearer $accessToken'},
         body: <String, dynamic>{
           'puzzle_id': progress.puzzleId,
           'type': progress.type.name,
@@ -31,8 +34,34 @@ class SupabaseProgressSyncService implements ProgressSyncService {
           'hints_used': progress.hintsUsed,
         },
       );
+    }
+
+    late final FunctionResponse response;
+    try {
+      response = await submit();
     } on FunctionException catch (error) {
       final parsed = _parseFunctionError(error);
+      if (parsed.reasonCode == 'invalid_user_session') {
+        await _client.auth.refreshSession();
+        session = _client.auth.currentSession;
+        if (session != null) {
+          try {
+            response = await submit(accessToken: session!.accessToken);
+          } on FunctionException catch (retryError) {
+            final retryParsed = _parseFunctionError(retryError);
+            throw ProgressSyncException(
+              _reasonMessage(
+                retryParsed.reasonCode,
+                fallback: retryParsed.message,
+              ),
+              reasonCode: retryParsed.reasonCode ?? 'function_error',
+            );
+          }
+          if (response.status >= 200 && response.status < 300) {
+            return;
+          }
+        }
+      }
       throw ProgressSyncException(
         _reasonMessage(parsed.reasonCode, fallback: parsed.message),
         reasonCode: parsed.reasonCode ?? 'function_error',
