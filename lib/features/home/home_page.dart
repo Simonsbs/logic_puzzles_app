@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logic_puzzles_app/core/models/leaderboard_entry.dart';
 import 'package:logic_puzzles_app/core/services/auth_service.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
+import 'package:logic_puzzles_app/core/models/mode_today_status.dart';
 import 'package:logic_puzzles_app/features/coming_soon/coming_soon_page.dart';
 import 'package:logic_puzzles_app/features/home/puzzle_type_card.dart';
 import 'package:logic_puzzles_app/features/puzzles/puzzle_list_page.dart';
@@ -190,7 +191,15 @@ class _PuzzleTypeTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final streak = ref.watch(modeStreakProvider(type)).valueOrNull;
-    return PuzzleTypeCard(type: type, onTap: onTap, streak: streak);
+    final todayStatus =
+        ref.watch(modeTodayStatusProvider(type)).valueOrNull ??
+        ModeTodayStatus.zero;
+    return PuzzleTypeCard(
+      type: type,
+      onTap: onTap,
+      streak: streak,
+      todayStatus: todayStatus,
+    );
   }
 }
 

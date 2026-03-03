@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logic_puzzles_app/core/config/app_config.dart';
 import 'package:logic_puzzles_app/core/models/leaderboard_entry.dart';
 import 'package:logic_puzzles_app/core/models/mode_streak.dart';
+import 'package:logic_puzzles_app/core/models/mode_today_status.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 import 'package:logic_puzzles_app/core/services/auth_service.dart';
 import 'package:logic_puzzles_app/core/services/leaderboard_service.dart';
@@ -265,6 +266,55 @@ final modeStreakProvider = FutureProvider.family<ModeStreak, PuzzleType>((
 
   return ModeStreak(basicDays: basicStreak, proDays: proStreak);
 });
+
+final modeTodayStatusProvider =
+    FutureProvider.family<ModeTodayStatus, PuzzleType>((ref, type) async {
+      if (!type.isAvailableNow) {
+        return ModeTodayStatus.zero;
+      }
+
+      final puzzles = await ref.read(puzzleRepositoryProvider).getPuzzles(type);
+      final remote = await ref
+          .read(puzzleProgressServiceProvider)
+          .progressByType(type);
+
+      final auth = ref.read(authServiceProvider);
+      final userId = auth.currentUser?.id ?? 'guest-local';
+      final prefs = await SharedPreferences.getInstance();
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      var totalToday = 0;
+      var completedToday = 0;
+
+      for (final puzzle in puzzles) {
+        final publishedAt = puzzle.publishedAt;
+        if (publishedAt == null) {
+          continue;
+        }
+        final publishedDay = DateTime(
+          publishedAt.year,
+          publishedAt.month,
+          publishedAt.day,
+        );
+        if (publishedDay != today) {
+          continue;
+        }
+
+        totalToday++;
+        final localCompleted =
+            prefs.getBool('puzzle_completed_${userId}_${puzzle.id}') ?? false;
+        final remoteCompleted = remote[puzzle.id]?.completed ?? false;
+        if (localCompleted || remoteCompleted) {
+          completedToday++;
+        }
+      }
+
+      return ModeTodayStatus(
+        totalToday: totalToday,
+        completedToday: completedToday,
+      );
+    });
 
 String _dayKeyUtc(DateTime dt) =>
     '${dt.toUtc().year}-${dt.toUtc().month.toString().padLeft(2, '0')}-${dt.toUtc().day.toString().padLeft(2, '0')}';
