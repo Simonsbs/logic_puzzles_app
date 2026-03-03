@@ -35,26 +35,42 @@ class HomePage extends ConsumerWidget {
               const SizedBox(height: 12),
               _HeroPanel(
                 userName: user?.displayName,
-                modeLabel: config.supabaseEnabled ? 'Cloud Sync On' : 'Local Mode',
+                modeLabel:
+                    config.supabaseEnabled ? 'Cloud Sync On' : 'Local Mode',
               ),
               const SizedBox(height: 18),
-              Text('Choose a puzzle', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Choose a puzzle',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
               ...PuzzleType.values.map(
                 (type) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: PuzzleTypeCard(
+                  child: _PuzzleTypeTile(
                     type: type,
                     onTap: () => _openPuzzleType(context, type),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              Text('Leaderboards', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Leaderboards',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
-              _LeaderboardSection(title: 'Sudoku', provider: sudokuTypeLeaderboardProvider),
-              _LeaderboardSection(title: 'Queens', provider: queensTypeLeaderboardProvider),
-              _LeaderboardSection(title: 'Daily streaks', provider: streakLeaderboardProvider),
+              _LeaderboardSection(
+                title: 'Sudoku',
+                provider: sudokuTypeLeaderboardProvider,
+              ),
+              _LeaderboardSection(
+                title: 'Queens',
+                provider: queensTypeLeaderboardProvider,
+              ),
+              _LeaderboardSection(
+                title: 'Daily streaks',
+                provider: streakLeaderboardProvider,
+              ),
             ],
           ),
         ),
@@ -74,9 +90,9 @@ class HomePage extends ConsumerWidget {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 
@@ -84,19 +100,38 @@ class HomePage extends ConsumerWidget {
     switch (type) {
       case PuzzleType.sudoku:
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PuzzleListPage(type: PuzzleType.sudoku)),
+          MaterialPageRoute(
+            builder: (_) => const PuzzleListPage(type: PuzzleType.sudoku),
+          ),
         );
       case PuzzleType.queens:
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PuzzleListPage(type: PuzzleType.queens)),
+          MaterialPageRoute(
+            builder: (_) => const PuzzleListPage(type: PuzzleType.queens),
+          ),
         );
       case PuzzleType.kakuro:
       case PuzzleType.nonogram:
       case PuzzleType.minesweeper:
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ComingSoonPage(puzzleName: type.displayName)),
+          MaterialPageRoute(
+            builder: (_) => ComingSoonPage(puzzleName: type.displayName),
+          ),
         );
     }
+  }
+}
+
+class _PuzzleTypeTile extends ConsumerWidget {
+  const _PuzzleTypeTile({required this.type, required this.onTap});
+
+  final PuzzleType type;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(modeStreakProvider(type)).valueOrNull;
+    return PuzzleTypeCard(type: type, onTap: onTap, streak: streak);
   }
 }
 
@@ -139,20 +174,30 @@ class _HeroPanel extends StatelessWidget {
           colors: <Color>[Color(0xFF123D2E), Color(0xFF1A7A5A)],
         ),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x33000000), blurRadius: 20, offset: Offset(0, 8)),
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            userName == null ? 'Play free forever. No ads.' : 'Welcome back, $userName',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+            userName == null
+                ? 'Play free forever. No ads.'
+                : 'Welcome back, $userName',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 8),
           Text(
             'Sudoku and Queens are live now. More puzzle types are on the way.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFFE6FFF5)),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: const Color(0xFFE6FFF5)),
           ),
           const SizedBox(height: 12),
           Container(
@@ -161,7 +206,13 @@ class _HeroPanel extends StatelessWidget {
               color: const Color(0x26FFFFFF),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(modeLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: Text(
+              modeLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -193,27 +244,32 @@ class _LeaderboardSection extends ConsumerWidget {
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 10),
           data.when(
-            data: (rows) => Column(
-              children: rows
-                  .map(
-                    (row) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: <Widget>[
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: const Color(0xFFE9F6F0),
-                            child: Text('${row.rank}', style: const TextStyle(fontSize: 11)),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(row.userName)),
-                          Text('${row.score} ${row.label}'),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
+            data:
+                (rows) => Column(
+                  children:
+                      rows
+                          .map(
+                            (row) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: <Widget>[
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: const Color(0xFFE9F6F0),
+                                    child: Text(
+                                      '${row.rank}',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(row.userName)),
+                                  Text('${row.score} ${row.label}'),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                ),
             loading: () => const LinearProgressIndicator(),
             error: (_, __) => const Text('Failed to load leaderboard'),
           ),

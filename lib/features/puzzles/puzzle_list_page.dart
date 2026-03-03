@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logic_puzzles_app/core/models/mode_streak.dart';
 import 'package:logic_puzzles_app/core/models/puzzle.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_progress_status.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
@@ -56,9 +57,12 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
             _selectedMonthIndex = data.months.length - 1;
           }
 
+          final modeStreak =
+              ref.watch(modeStreakProvider(widget.type)).valueOrNull;
+
           return Column(
             children: <Widget>[
-              _buildCalendarControl(data),
+              _buildCalendarControl(data, modeStreak),
               const Divider(height: 1),
               Expanded(
                 child: ListView.builder(
@@ -67,7 +71,10 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
                   itemCount: data.sections.length,
                   itemBuilder: (context, index) {
                     final section = data.sections[index];
-                    final key = _sectionKeys.putIfAbsent(_dayKey(section.date), () => GlobalKey());
+                    final key = _sectionKeys.putIfAbsent(
+                      _dayKey(section.date),
+                      () => GlobalKey(),
+                    );
                     return Container(
                       key: key,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -83,7 +90,7 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
     );
   }
 
-  Widget _buildCalendarControl(_PuzzleListData data) {
+  Widget _buildCalendarControl(_PuzzleListData data, ModeStreak? modeStreak) {
     final month = data.months[_selectedMonthIndex];
     final monthDates = data.datesForMonth(month);
 
@@ -104,12 +111,55 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
       color: const Color(0xFFF7FAFC),
       child: Column(
         children: <Widget>[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF4FF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFB9D4F5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  size: 16,
+                  color: Color(0xFFCF6A00),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Basic ${modeStreak?.basicDays ?? 0}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF28425D),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 16,
+                  color: Color(0xFF0D8A63),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Pro ${modeStreak?.proDays ?? 0}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF28425D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: <Widget>[
               IconButton(
-                onPressed: _selectedMonthIndex > 0
-                    ? () => setState(() => _selectedMonthIndex--)
-                    : null,
+                onPressed:
+                    _selectedMonthIndex > 0
+                        ? () => setState(() => _selectedMonthIndex--)
+                        : null,
                 icon: const Icon(Icons.chevron_left),
                 tooltip: 'Previous month',
               ),
@@ -117,14 +167,18 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
                 child: Center(
                   child: Text(
                     _monthLabel(month),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
               IconButton(
-                onPressed: _selectedMonthIndex < data.months.length - 1
-                    ? () => setState(() => _selectedMonthIndex++)
-                    : null,
+                onPressed:
+                    _selectedMonthIndex < data.months.length - 1
+                        ? () => setState(() => _selectedMonthIndex++)
+                        : null,
                 icon: const Icon(Icons.chevron_right),
                 tooltip: 'Next month',
               ),
@@ -169,15 +223,22 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
                   child: Center(
                     child: Text(
                       '${date.day}',
-                      style: const TextStyle(color: Color(0xFF98A7B3), fontSize: 12),
+                      style: const TextStyle(
+                        color: Color(0xFF98A7B3),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 );
               }
 
-              final state = _solveState(summary.solvedCount, summary.totalCount);
-              final color = _stateColor(state);
-              final icon = _stateIcon(state);
+              final streakType = _streakType(
+                solved: summary.solvedCount,
+                inProgress: summary.inProgressCount,
+                total: summary.totalCount,
+              );
+              final color = _streakColor(streakType);
+              final icon = _streakIcon(streakType);
 
               return InkWell(
                 borderRadius: BorderRadius.circular(8),
@@ -193,7 +254,10 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
                     children: <Widget>[
                       Text(
                         '${date.day}',
-                        style: TextStyle(fontWeight: FontWeight.w700, color: color),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Icon(icon, size: 13, color: color),
@@ -208,9 +272,21 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
             spacing: 10,
             runSpacing: 6,
             children: <Widget>[
-              _LegendItem(label: 'Unsolved', color: Color(0xFFC0392B), icon: Icons.radio_button_unchecked),
-              _LegendItem(label: 'Some solved', color: Color(0xFFB26A00), icon: Icons.timelapse),
-              _LegendItem(label: 'All solved', color: Color(0xFF198754), icon: Icons.check_circle),
+              _LegendItem(
+                label: 'No streak',
+                color: Color(0xFFC0392B),
+                icon: Icons.radio_button_unchecked,
+              ),
+              _LegendItem(
+                label: 'Basic streak',
+                color: Color(0xFFB26A00),
+                icon: Icons.local_fire_department_rounded,
+              ),
+              _LegendItem(
+                label: 'Pro streak',
+                color: Color(0xFF198754),
+                icon: Icons.workspace_premium_rounded,
+              ),
             ],
           ),
         ],
@@ -220,7 +296,8 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
 
   Widget _buildDaySection(_PuzzleListData data, _PuzzleDaySection section) {
     final dateLabel = _formatDate(section.date);
-    final stats = 'Solved ${section.solvedCount}/${section.rows.length}'
+    final stats =
+        'Solved ${section.solvedCount}/${section.rows.length}'
         '${section.inProgressCount > 0 ? ' • In progress ${section.inProgressCount}' : ''}';
 
     return Container(
@@ -310,8 +387,12 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
   }
 
   Future<_PuzzleListData> _load() async {
-    final puzzles = await ref.read(puzzleRepositoryProvider).getPuzzles(widget.type);
-    final remote = await ref.read(puzzleProgressServiceProvider).progressByType(widget.type);
+    final puzzles = await ref
+        .read(puzzleRepositoryProvider)
+        .getPuzzles(widget.type);
+    final remote = await ref
+        .read(puzzleProgressServiceProvider)
+        .progressByType(widget.type);
     final merged = Map<String, PuzzleProgressStatus>.from(remote);
 
     final auth = ref.read(authServiceProvider);
@@ -319,17 +400,22 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
     final prefs = await SharedPreferences.getInstance();
 
     for (final puzzle in puzzles) {
-      final localCompleted = prefs.getBool('puzzle_completed_${userId}_${puzzle.id}') ?? false;
+      final localCompleted =
+          prefs.getBool('puzzle_completed_${userId}_${puzzle.id}') ?? false;
       final remoteStatus = merged[puzzle.id];
 
       var localInProgress = false;
       if (puzzle.type == PuzzleType.sudoku) {
-        final session = await ref.read(puzzleSessionServiceProvider).loadSudokuSession(puzzleId: puzzle.id);
+        final session = await ref
+            .read(puzzleSessionServiceProvider)
+            .loadSudokuSession(puzzleId: puzzle.id);
         localInProgress = session != null && session.elapsedSeconds > 0;
       }
 
       final completed = (remoteStatus?.completed ?? false) || localCompleted;
-      final inProgress = !completed && ((remoteStatus?.inProgress ?? false) || localInProgress);
+      final inProgress =
+          !completed &&
+          ((remoteStatus?.inProgress ?? false) || localInProgress);
       final bestSeconds = remoteStatus?.bestSeconds ?? 0;
 
       merged[puzzle.id] = PuzzleProgressStatus(
@@ -340,16 +426,19 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
       );
     }
 
-    final sorted = List<Puzzle>.from(puzzles)
-      ..sort((a, b) {
-        final da = a.publishedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
-        final db = b.publishedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
-        final dateCmp = db.compareTo(da);
-        if (dateCmp != 0) {
-          return dateCmp;
-        }
-        return _difficultyRank(a.difficulty).compareTo(_difficultyRank(b.difficulty));
-      });
+    final sorted = List<Puzzle>.from(puzzles)..sort((a, b) {
+      final da =
+          a.publishedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      final db =
+          b.publishedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      final dateCmp = db.compareTo(da);
+      if (dateCmp != 0) {
+        return dateCmp;
+      }
+      return _difficultyRank(
+        a.difficulty,
+      ).compareTo(_difficultyRank(b.difficulty));
+    });
 
     final sequence = sorted;
     final indexById = <String, int>{};
@@ -364,10 +453,13 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
       final date = _dateOnly(puzzle.publishedAt ?? DateTime.now().toUtc());
       final key = _dayKey(date);
       dayDate[key] = date;
-      byDay.putIfAbsent(key, () => <_PuzzleRow>[]).add(
+      byDay
+          .putIfAbsent(key, () => <_PuzzleRow>[])
+          .add(
             _PuzzleRow(
               puzzle: puzzle,
-              status: merged[puzzle.id] ??
+              status:
+                  merged[puzzle.id] ??
                   const PuzzleProgressStatus(
                     completed: false,
                     inProgress: false,
@@ -377,12 +469,17 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
           );
     }
 
-    final dayKeys = byDay.keys.toList()
-      ..sort((a, b) => dayDate[b]!.compareTo(dayDate[a]!));
+    final dayKeys =
+        byDay.keys.toList()..sort((a, b) => dayDate[b]!.compareTo(dayDate[a]!));
 
     final sections = <_PuzzleDaySection>[];
     for (final key in dayKeys) {
-      final rows = byDay[key]!..sort((a, b) => _difficultyRank(a.puzzle.difficulty).compareTo(_difficultyRank(b.puzzle.difficulty)));
+      final rows =
+          byDay[key]!..sort(
+            (a, b) => _difficultyRank(
+              a.puzzle.difficulty,
+            ).compareTo(_difficultyRank(b.puzzle.difficulty)),
+          );
       final solvedCount = rows.where((row) => row.status.completed).length;
       final inProgressCount = rows.where((row) => row.status.inProgress).length;
       sections.add(
@@ -402,7 +499,9 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
     }
     final months = monthSet.values.toList()..sort((a, b) => a.compareTo(b));
     final currentMonth = DateTime.now();
-    var selectedMonthIndex = months.indexWhere((m) => m.year == currentMonth.year && m.month == currentMonth.month);
+    var selectedMonthIndex = months.indexWhere(
+      (m) => m.year == currentMonth.year && m.month == currentMonth.month,
+    );
     if (selectedMonthIndex == -1) {
       selectedMonthIndex = months.length - 1;
     }
@@ -424,20 +523,23 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
     if (status.completed) {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Replay solved puzzle?'),
-          content: const Text('Your previous result will be replaced with this new run.'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+        builder:
+            (context) => AlertDialog(
+              title: const Text('Replay solved puzzle?'),
+              content: const Text(
+                'Your previous result will be replaced with this new run.',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Replay'),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Replay'),
-            ),
-          ],
-        ),
       );
       if (confirmed != true || !mounted) {
         return;
@@ -448,17 +550,18 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
       case PuzzleType.sudoku:
         await Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => SudokuPage(
-              puzzle: puzzle,
-              puzzleSequence: data.sequence,
-              puzzleIndex: data.indexById[puzzle.id] ?? 0,
-            ),
+            builder:
+                (_) => SudokuPage(
+                  puzzle: puzzle,
+                  puzzleSequence: data.sequence,
+                  puzzleIndex: data.indexById[puzzle.id] ?? 0,
+                ),
           ),
         );
       case PuzzleType.queens:
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => QueensPage(puzzle: puzzle)),
-        );
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => QueensPage(puzzle: puzzle)));
       case PuzzleType.kakuro:
       case PuzzleType.nonogram:
       case PuzzleType.minesweeper:
@@ -488,7 +591,8 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
 
   DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
-  String _dayKey(DateTime date) => '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  String _dayKey(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   int _difficultyRank(String difficulty) {
     switch (difficulty.toLowerCase()) {
@@ -524,35 +628,42 @@ class _PuzzleListPageState extends ConsumerState<PuzzleListPage> {
     return '${names[month.month]} ${month.year}';
   }
 
-  _DaySolveState _solveState(int solved, int total) {
-    if (total == 0 || solved == 0) {
-      return _DaySolveState.unsolved;
+  _DayStreakType _streakType({
+    required int solved,
+    required int inProgress,
+    required int total,
+  }) {
+    if (total == 0) {
+      return _DayStreakType.none;
     }
     if (solved >= total) {
-      return _DaySolveState.allSolved;
+      return _DayStreakType.pro;
     }
-    return _DaySolveState.someSolved;
+    if (solved > 0 || inProgress > 0) {
+      return _DayStreakType.basic;
+    }
+    return _DayStreakType.none;
   }
 
-  Color _stateColor(_DaySolveState state) {
-    switch (state) {
-      case _DaySolveState.unsolved:
+  Color _streakColor(_DayStreakType streakType) {
+    switch (streakType) {
+      case _DayStreakType.none:
         return const Color(0xFFC0392B);
-      case _DaySolveState.someSolved:
+      case _DayStreakType.basic:
         return const Color(0xFFB26A00);
-      case _DaySolveState.allSolved:
+      case _DayStreakType.pro:
         return const Color(0xFF198754);
     }
   }
 
-  IconData _stateIcon(_DaySolveState state) {
-    switch (state) {
-      case _DaySolveState.unsolved:
+  IconData _streakIcon(_DayStreakType streakType) {
+    switch (streakType) {
+      case _DayStreakType.none:
         return Icons.radio_button_unchecked;
-      case _DaySolveState.someSolved:
-        return Icons.timelapse;
-      case _DaySolveState.allSolved:
-        return Icons.check_circle;
+      case _DayStreakType.basic:
+        return Icons.local_fire_department_rounded;
+      case _DayStreakType.pro:
+        return Icons.workspace_premium_rounded;
     }
   }
 }
@@ -573,8 +684,10 @@ class _PuzzleListData {
   Map<String, _PuzzleDaySection> datesForMonth(DateTime month) {
     final out = <String, _PuzzleDaySection>{};
     for (final section in sections) {
-      if (section.date.year == month.year && section.date.month == month.month) {
-        out['${section.date.year}-${section.date.month.toString().padLeft(2, '0')}-${section.date.day.toString().padLeft(2, '0')}'] = section;
+      if (section.date.year == month.year &&
+          section.date.month == month.month) {
+        out['${section.date.year}-${section.date.month.toString().padLeft(2, '0')}-${section.date.day.toString().padLeft(2, '0')}'] =
+            section;
       }
     }
     return out;
@@ -604,14 +717,14 @@ class _PuzzleRow {
   final PuzzleProgressStatus status;
 }
 
-enum _DaySolveState {
-  unsolved,
-  someSolved,
-  allSolved,
-}
+enum _DayStreakType { none, basic, pro }
 
 class _StatePill extends StatelessWidget {
-  const _StatePill({required this.label, required this.color, required this.bgColor});
+  const _StatePill({
+    required this.label,
+    required this.color,
+    required this.bgColor,
+  });
 
   final String label;
   final Color color;
@@ -621,14 +734,28 @@ class _StatePill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
     );
   }
 }
 
 class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.label, required this.color, required this.icon});
+  const _LegendItem({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
 
   final String label;
   final Color color;
@@ -641,7 +768,14 @@ class _LegendItem extends StatelessWidget {
       children: <Widget>[
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ],
     );
   }
@@ -658,7 +792,11 @@ class _WeekdayCell extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF7D8D99), fontWeight: FontWeight.w700),
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF7D8D99),
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

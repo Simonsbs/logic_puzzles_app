@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logic_puzzles_app/core/models/mode_streak.dart';
 import 'package:logic_puzzles_app/core/models/puzzle_type.dart';
 
 class PuzzleTypeCard extends StatelessWidget {
@@ -6,15 +7,18 @@ class PuzzleTypeCard extends StatelessWidget {
     super.key,
     required this.type,
     required this.onTap,
+    this.streak,
   });
 
   final PuzzleType type;
   final VoidCallback onTap;
+  final ModeStreak? streak;
 
   @override
   Widget build(BuildContext context) {
     final available = type.isAvailableNow;
-    final accent = available ? const Color(0xFF0D8A63) : const Color(0xFFCC8A17);
+    final accent =
+        available ? const Color(0xFF0D8A63) : const Color(0xFFCC8A17);
 
     return Material(
       color: Colors.white,
@@ -48,15 +52,30 @@ class PuzzleTypeCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(type.displayName, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        type.displayName,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         available ? 'Playable now' : 'Coming soon',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: accent,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: accent,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                      if (available && streak != null) ...<Widget>[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Streak B:${streak!.basicDays}  P:${streak!.proDays}',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF3D5A4F),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
