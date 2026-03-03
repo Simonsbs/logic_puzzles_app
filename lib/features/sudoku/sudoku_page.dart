@@ -129,6 +129,10 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
                         },
                   icon: Icon(_pencilMode ? Icons.edit_note : Icons.edit_outlined, size: 18),
                   label: const Text('Pencil'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _pencilMode ? const Color(0xFF3659B5) : null,
+                    foregroundColor: _pencilMode ? Colors.white : null,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -159,44 +163,36 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
 
   Widget _boardCard() {
     final conflictCells = _conflictingCells();
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x14000000)),
-      ),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: Stack(
-          children: <Widget>[
-            Table(
-              defaultColumnWidth: const FlexColumnWidth(),
-              children: List<TableRow>.generate(9, (row) {
-                return TableRow(
-                  children: List<Widget>.generate(9, (col) {
-                    return AspectRatio(
-                      aspectRatio: 1,
-                      child: _buildCell(row, col, conflictCells),
-                    );
-                  }),
-                );
-              }),
-            ),
-            if (_paused)
-              Positioned.fill(
-                child: Container(
-                  color: const Color(0xE0111519),
-                  child: const Center(
-                    child: Text(
-                      'Paused',
-                      style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
-                    ),
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Stack(
+        children: <Widget>[
+          Table(
+            defaultColumnWidth: const FlexColumnWidth(),
+            children: List<TableRow>.generate(9, (row) {
+              return TableRow(
+                children: List<Widget>.generate(9, (col) {
+                  return AspectRatio(
+                    aspectRatio: 1,
+                    child: _buildCell(row, col, conflictCells),
+                  );
+                }),
+              );
+            }),
+          ),
+          if (_paused)
+            Positioned.fill(
+              child: Container(
+                color: const Color(0xE0111519),
+                child: const Center(
+                  child: Text(
+                    'Paused',
+                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -207,6 +203,8 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     final selected = _selectedRow == row && _selectedCol == col;
     final fixed = _fixedCells.contains(key);
     final hasConflict = conflictCells.contains(key);
+    final inSelectedLine = (_selectedRow != null && _selectedCol != null) &&
+        (row == _selectedRow || col == _selectedCol);
 
     final selectedValue = (_selectedRow != null && _selectedCol != null)
         ? _board[_selectedRow!][_selectedCol!]
@@ -214,13 +212,18 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
     final sameValue = selectedValue != 0 && value == selectedValue;
 
     final boxShade = ((row ~/ 3) + (col ~/ 3)).isEven;
-    Color background = boxShade ? const Color(0xFFF7FBF8) : const Color(0xFFEDF4F0);
+    final baseA = _pencilMode ? const Color(0xFFF2F6FF) : const Color(0xFFF7FBF8);
+    final baseB = _pencilMode ? const Color(0xFFEAF0FF) : const Color(0xFFEDF4F0);
+    Color background = boxShade ? baseA : baseB;
 
     if (fixed) {
-      background = const Color(0xFFE2ECE7);
+      background = _pencilMode ? const Color(0xFFE2EAFF) : const Color(0xFFE2ECE7);
+    }
+    if (inSelectedLine && !selected) {
+      background = _pencilMode ? const Color(0xFFD7E4FF) : const Color(0xFFE1F0E9);
     }
     if (sameValue) {
-      background = const Color(0xFFD9F2E7);
+      background = _pencilMode ? const Color(0xFFC7D9FF) : const Color(0xFFD9F2E7);
     }
     if (hasConflict) {
       background = const Color(0xFFF8D4D4);
@@ -234,16 +237,22 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
         width: col == 0
             ? 2.2
             : (col % 3 == 0 ? 1.8 : 0.7),
-        color: const Color(0xFF5A6B64),
+        color: _pencilMode ? const Color(0xFF5F6CA0) : const Color(0xFF5A6B64),
       ),
       top: BorderSide(
         width: row == 0
             ? 2.2
             : (row % 3 == 0 ? 1.8 : 0.7),
-        color: const Color(0xFF5A6B64),
+        color: _pencilMode ? const Color(0xFF5F6CA0) : const Color(0xFF5A6B64),
       ),
-      right: BorderSide(width: col == 8 ? 2.2 : 0, color: const Color(0xFF5A6B64)),
-      bottom: BorderSide(width: row == 8 ? 2.2 : 0, color: const Color(0xFF5A6B64)),
+      right: BorderSide(
+        width: col == 8 ? 2.2 : 0,
+        color: _pencilMode ? const Color(0xFF5F6CA0) : const Color(0xFF5A6B64),
+      ),
+      bottom: BorderSide(
+        width: row == 8 ? 2.2 : 0,
+        color: _pencilMode ? const Color(0xFF5F6CA0) : const Color(0xFF5A6B64),
+      ),
     );
 
     return GestureDetector(
@@ -266,7 +275,9 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
                     fontSize: 24,
                     color: hasConflict
                         ? const Color(0xFF8B1C1C)
-                        : (fixed ? const Color(0xFF2E3A35) : const Color(0xFF0D6144)),
+                        : (fixed
+                              ? (_pencilMode ? const Color(0xFF2D3352) : const Color(0xFF2E3A35))
+                              : (_pencilMode ? const Color(0xFF234AA5) : const Color(0xFF0D6144))),
                   ),
                 ),
               )
@@ -309,7 +320,12 @@ class _SudokuPageState extends ConsumerState<SudokuPage> with WidgetsBindingObse
         final n = i + 1;
         return FilledButton.tonal(
           onPressed: _paused || _solved ? null : () => _applyNumber(n),
-          style: FilledButton.styleFrom(padding: EdgeInsets.zero, textStyle: const TextStyle(fontSize: 22)),
+          style: FilledButton.styleFrom(
+            padding: EdgeInsets.zero,
+            textStyle: const TextStyle(fontSize: 22),
+            backgroundColor: _pencilMode ? const Color(0xFFDCE6FF) : null,
+            foregroundColor: _pencilMode ? const Color(0xFF234AA5) : null,
+          ),
           child: Text('$n', style: const TextStyle(fontWeight: FontWeight.w800)),
         );
       }),
