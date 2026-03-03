@@ -144,93 +144,110 @@ final modeStreakProvider = FutureProvider.family<ModeStreak, PuzzleType>((
   final userId = auth.currentUser?.id ?? 'guest-local';
   final prefs = await SharedPreferences.getInstance();
 
-  final mergedSolved = Map<String, bool>.fromEntries(
-    puzzles.map((p) => MapEntry(p.id, remote[p.id]?.completed ?? false)),
-  );
-  final mergedPlayed = Map<String, bool>.fromEntries(
-    puzzles.map(
-      (p) => MapEntry(
-        p.id,
-        (remote[p.id]?.completed ?? false) ||
-            (remote[p.id]?.inProgress ?? false),
-      ),
-    ),
-  );
+  final dayPlayed = <String, int>{};
+  final dayPublishedTotals = <String, int>{};
+  final dayProSolved = <String, int>{};
+  final nowUtc = DateTime.now().toUtc();
 
   for (final puzzle in puzzles) {
+    final publishedAt = puzzle.publishedAt?.toUtc();
+    if (publishedAt != null) {
+      final publishedKey = _dayKeyUtc(publishedAt);
+      dayPublishedTotals[publishedKey] =
+          (dayPublishedTotals[publishedKey] ?? 0) + 1;
+    }
+
+    final status = remote[puzzle.id];
     final localCompleted =
         prefs.getBool('puzzle_completed_${userId}_${puzzle.id}') ?? false;
-    if (localCompleted) {
-      mergedSolved[puzzle.id] = true;
-      mergedPlayed[puzzle.id] = true;
+    final localCompletedAtRaw = prefs.getString(
+      'puzzle_completed_${userId}_${puzzle.id}_at',
+    );
+    final localCompletedAt =
+        localCompletedAtRaw == null
+            ? null
+            : DateTime.tryParse(localCompletedAtRaw)?.toUtc();
+
+    DateTime? playedAt;
+    if ((status?.completed ?? false) || (status?.inProgress ?? false)) {
+      playedAt = status?.updatedAt?.toUtc();
     }
     if (type == PuzzleType.sudoku) {
       final session = await sessionService.loadSudokuSession(
         puzzleId: puzzle.id,
       );
       if (session != null && session.elapsedSeconds > 0) {
-        mergedPlayed[puzzle.id] = true;
+        final sessionAt = session.updatedAt.toUtc();
+        if (playedAt == null || sessionAt.isAfter(playedAt)) {
+          playedAt = sessionAt;
+        }
       }
     }
-  }
-
-  final dayTotals = <String, int>{};
-  final daySolved = <String, int>{};
-  final dayPlayed = <String, int>{};
-
-  for (final puzzle in puzzles) {
-    final published = puzzle.publishedAt ?? DateTime.now().toUtc();
-    final dayKey = _dayKeyUtc(published);
-    dayTotals[dayKey] = (dayTotals[dayKey] ?? 0) + 1;
-    if (mergedSolved[puzzle.id] == true) {
-      daySolved[dayKey] = (daySolved[dayKey] ?? 0) + 1;
-    }
-    if (mergedPlayed[puzzle.id] == true) {
-      dayPlayed[dayKey] = (dayPlayed[dayKey] ?? 0) + 1;
-    }
-  }
-
-  final dates =
-      dayTotals.keys
-          .map(_dateFromKey)
-          .where(
-            (d) =>
-                d.isBefore(DateTime.now().toUtc().add(const Duration(days: 1))),
-          )
-          .toList()
-        ..sort((a, b) => b.compareTo(a));
-
-  if (dates.isEmpty) {
-    return ModeStreak.zero;
-  }
-
-  final start = dates.first;
-
-  int compute(bool pro) {
-    var streak = 0;
-    var cursor = start;
-    while (true) {
-      final key = _dayKeyUtc(cursor);
-      final total = dayTotals[key] ?? 0;
-      final solved = daySolved[key] ?? 0;
-      final played = dayPlayed[key] ?? 0;
-      final hit = pro ? (total > 0 && solved >= total) : (played > 0);
-      if (!hit) {
-        break;
+    if (localCompleted) {
+      final localAt = localCompletedAt ?? nowUtc;
+      if (playedAt == null || localAt.isAfter(playedAt)) {
+        playedAt = localAt;
       }
-      streak++;
-      cursor = cursor.subtract(const Duration(days: 1));
     }
-    return streak;
+
+    if (playedAt != null) {
+      final key = _dayKeyUtc(playedAt);
+      dayPlayed[key] = (dayPlayed[key] ?? 0) + 1;
+    }
+
+    DateTime? completedAt;
+    if (status?.completed == true && status?.updatedAt != null) {
+      completedAt = status!.updatedAt!.toUtc();
+    }
+    if (localCompleted) {
+      final localAt = localCompletedAt ?? nowUtc;
+      if (completedAt == null || localAt.isAfter(completedAt)) {
+        completedAt = localAt;
+      }
+    }
+
+    if (completedAt != null &&
+        publishedAt != null &&
+        _sameUtcDay(completedAt, publishedAt)) {
+      final key = _dayKeyUtc(publishedAt);
+      dayProSolved[key] = (dayProSolved[key] ?? 0) + 1;
+    }
   }
 
-  return ModeStreak(basicDays: compute(false), proDays: compute(true));
+  final today = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
+
+  int basicStreak = 0;
+  var cursor = today;
+  while (true) {
+    final key = _dayKeyUtc(cursor);
+    if ((dayPlayed[key] ?? 0) <= 0) {
+      break;
+    }
+    basicStreak++;
+    cursor = cursor.subtract(const Duration(days: 1));
+  }
+
+  int proStreak = 0;
+  cursor = today;
+  while (true) {
+    final key = _dayKeyUtc(cursor);
+    final total = dayPublishedTotals[key] ?? 0;
+    final solved = dayProSolved[key] ?? 0;
+    if (total <= 0 || solved < total) {
+      break;
+    }
+    proStreak++;
+    cursor = cursor.subtract(const Duration(days: 1));
+  }
+
+  return ModeStreak(basicDays: basicStreak, proDays: proStreak);
 });
 
 String _dayKeyUtc(DateTime dt) =>
     '${dt.toUtc().year}-${dt.toUtc().month.toString().padLeft(2, '0')}-${dt.toUtc().day.toString().padLeft(2, '0')}';
 
-DateTime _dateFromKey(String key) {
-  final parts = key.split('-').map(int.parse).toList(growable: false);
-  return DateTime.utc(parts[0], parts[1], parts[2]);
+bool _sameUtcDay(DateTime a, DateTime b) {
+  final ua = a.toUtc();
+  final ub = b.toUtc();
+  return ua.year == ub.year && ua.month == ub.month && ua.day == ub.day;
 }
