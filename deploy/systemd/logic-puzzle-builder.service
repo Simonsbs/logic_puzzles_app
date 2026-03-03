@@ -1,0 +1,11 @@
+[Unit]
+Description=Logic Puzzles daily builder and uploader
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/simon/logic_puzzles_app
+ExecStart=/home/simon/logic_puzzles_app/scripts/run_puzzle_builder.sh --days 1
+User=simon
+Group=simon

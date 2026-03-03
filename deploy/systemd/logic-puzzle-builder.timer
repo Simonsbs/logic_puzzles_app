@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Logic Puzzles builder daily
+
+[Timer]
+OnCalendar=*-*-* 00:15:00
+Persistent=true
+Unit=logic-puzzle-builder.service
+
+[Install]
+WantedBy=timers.target

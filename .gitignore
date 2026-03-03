@@ -46,3 +46,4 @@ app.*.map.json
 
 # Local Supabase runtime config
 .env.supabase.json
+.env.puzzle_builder

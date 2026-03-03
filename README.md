@@ -43,6 +43,8 @@ Applied by CLI:
   - daily attempt cap per puzzle
   - unrealistic-time and streak-jump validation
   - hint usage tracked and applied to puzzle leaderboard score (`+20s` per hint)
+  - puzzle session save function: `save-puzzle-session`
+  - puzzle ingest function: `ingest-puzzles`
 
 Still required in Supabase dashboard:
 1. In Auth providers, enable Google OAuth and configure Google client ID/secret.
@@ -70,6 +72,51 @@ Or use the prepared local file and script:
 ```bash
 ./scripts/run_supabase.sh
 ```
+
+## Puzzle Builder Service (Daily + Manual Backlog)
+
+Generates and uploads daily Sudoku puzzles:
+- 3 puzzles per day (`Easy`, `Medium`, `Hard`)
+- validates puzzles are uniquely solvable before upload
+- computes SHA-256 hash and avoids duplicates
+
+### Setup
+
+1. Create builder env file:
+```bash
+cp .env.puzzle_builder.example .env.puzzle_builder
+```
+2. Fill real values in `.env.puzzle_builder`:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `PUZZLE_BUILDER_SECRET` (must match Supabase function secret)
+
+### Manual run
+
+Generate/upload today:
+```bash
+./scripts/run_puzzle_builder.sh --days 1
+```
+
+Generate backlog from a date:
+```bash
+./scripts/run_puzzle_builder.sh --start-date 2026-03-01 --days 30
+```
+
+Dry run only (no upload):
+```bash
+./scripts/run_puzzle_builder.sh --start-date 2026-03-01 --days 7 --dry-run
+```
+
+### Install daily systemd timer on this machine
+
+```bash
+./scripts/install_puzzle_builder_service.sh
+```
+
+Timer/unit files:
+- `deploy/systemd/logic-puzzle-builder.service`
+- `deploy/systemd/logic-puzzle-builder.timer`
 
 ## Next implementation steps
 

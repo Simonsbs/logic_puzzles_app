@@ -4,6 +4,7 @@ create table if not exists puzzles (
   title text not null,
   difficulty text not null,
   payload jsonb not null,
+  puzzle_hash text,
   is_daily boolean not null default false,
   published_at timestamptz not null default now(),
   created_at timestamptz not null default now()
@@ -11,6 +12,10 @@ create table if not exists puzzles (
 
 create index if not exists puzzles_type_daily_published_idx
   on puzzles (type, is_daily, published_at desc);
+
+create unique index if not exists puzzles_type_hash_unique_idx
+  on puzzles (type, puzzle_hash)
+  where puzzle_hash is not null;
 
 create table if not exists user_progress (
   user_id uuid not null,
