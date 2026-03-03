@@ -16,7 +16,7 @@ class LogicGamesApp extends StatelessWidget {
     );
 
     return MaterialApp(
-      title: 'Logic Games',
+      title: 'Puzzle Quest',
       debugShowCheckedModeBanner: false,
       theme: base.copyWith(
         textTheme: GoogleFonts.spaceGroteskTextTheme(base.textTheme),

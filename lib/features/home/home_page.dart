@@ -18,7 +18,7 @@ class HomePage extends ConsumerWidget {
     final config = ref.watch(appConfigProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Logic Games')),
+      appBar: AppBar(title: const Text('Puzzle Quest')),
       drawer: _AppDrawer(user: user),
       body: Container(
         decoration: const BoxDecoration(

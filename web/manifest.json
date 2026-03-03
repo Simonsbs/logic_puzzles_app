@@ -1,6 +1,6 @@
 {
-    "name": "logic_puzzles_app",
-    "short_name": "logic_puzzles_app",
+    "name": "Puzzle Quest",
+    "short_name": "Puzzle Quest",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

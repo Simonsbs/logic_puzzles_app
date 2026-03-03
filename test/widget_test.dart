@@ -11,14 +11,10 @@ import 'package:logic_puzzles_app/app.dart';
 
 void main() {
   testWidgets('home screen renders', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: LogicGamesApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: LogicGamesApp()));
 
     await tester.pump();
-    expect(find.text('Logic Games'), findsOneWidget);
+    expect(find.text('Puzzle Quest'), findsOneWidget);
     expect(find.text('Choose a puzzle'), findsOneWidget);
   });
 }
