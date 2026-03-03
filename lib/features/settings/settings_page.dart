@@ -195,18 +195,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<int> _syncLocalCompletions(Map<String, PuzzleType> puzzleTypes) async {
     final user = ref.read(authServiceProvider).currentUser;
     if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign in required to upload leaderboard scores'),
+          ),
+        );
+      }
       return 0;
     }
 
     final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    final candidatePuzzleIds = <String>{};
+
+    for (final key in keys) {
+      if (!key.startsWith('puzzle_completed_') || key.endsWith('_at')) {
+        continue;
+      }
+      final value = prefs.getBool(key) ?? false;
+      if (!value) {
+        continue;
+      }
+      final prefixIndex = key.indexOf('_', 'puzzle_completed_'.length);
+      if (prefixIndex == -1 || prefixIndex + 1 >= key.length) {
+        continue;
+      }
+      candidatePuzzleIds.add(key.substring(prefixIndex + 1));
+    }
+
     var synced = 0;
 
-    for (final entry in puzzleTypes.entries) {
-      final puzzleId = entry.key;
-      final type = entry.value;
-      final completedKey = 'puzzle_completed_${user.id}_$puzzleId';
-      final localCompleted = prefs.getBool(completedKey) ?? false;
-      if (!localCompleted) {
+    for (final puzzleId in candidatePuzzleIds) {
+      final type = puzzleTypes[puzzleId];
+      if (type == null) {
         continue;
       }
 
